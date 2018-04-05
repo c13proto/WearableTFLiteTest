@@ -11,12 +11,11 @@ import android.view.WindowManager
 import android.widget.CompoundButton
 import android.widget.SeekBar
 import android.widget.Switch
-import com.sonymobile.agent.robot.camera.CameraUtils
+import com.sonymobile.agent.robot.camera.CvUtils
+import com.sonymobile.agent.robot.camera.CvUtilsK
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-import java.nio.ByteBuffer
-
 
 
 class CustomViewMediaCodec @JvmOverloads
@@ -182,15 +181,16 @@ private var didWriteBuffer=false
     }
 
     private fun convertNv12ToBitmap(nv12: ByteArray, width: Int, height: Int, pitch: Int): Bitmap {
-        val imageSize = width * pitch
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val yBuffer = ByteBuffer.allocateDirect(imageSize)
-        val uBuffer = ByteBuffer.allocateDirect(imageSize / 2-1)
-        val vBuffer = ByteBuffer.allocateDirect(imageSize / 2-1)
-        yBuffer.put(nv12, 0, imageSize)
-        uBuffer.put(nv12, imageSize, imageSize / 2-1)
-        vBuffer.put(nv12, imageSize+1 , imageSize / 2-1 )
-        CameraUtils.convertNv21ToBitmap(yBuffer, uBuffer, vBuffer, bitmap)
+//        val imageSize = width * pitch
+//        val yBuffer = ByteBuffer.allocateDirect(imageSize)
+//        val uBuffer = ByteBuffer.allocateDirect(imageSize / 2-1)
+//        val vBuffer = ByteBuffer.allocateDirect(imageSize / 2-1)
+//        yBuffer.put(nv12, 0, imageSize)
+//        uBuffer.put(nv12, imageSize, imageSize / 2-1)
+//        vBuffer.put(nv12, imageSize+1 , imageSize / 2-1 )
+//        CameraUtils.convertNv21ToBitmap(yBuffer, uBuffer, vBuffer, bitmap)
+        CvUtils.nativeYuvToBitmap(nv12,false,width,height,pitch,bitmap)
         return bitmap
     }
     inner class PlayerThread(var mCustomViewMediaCodec: CustomViewMediaCodec) : Thread() {

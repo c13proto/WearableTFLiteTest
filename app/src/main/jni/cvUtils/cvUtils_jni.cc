@@ -15,22 +15,31 @@ Mat YuvToBGR(jbyte* src,int width,int height, int pitch,bool isNV21);
 Mat YuvToGray(jbyte* src,int width,int height);
 
 
-JNI_METHOD(jboolean,nativeYuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,jboolean isNV21,jint src_width,jint src_height,jint src_pitch,jobject dst_bitmap){
+JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,jboolean isNV21,jint src_width,jint src_height,jint src_pitch,jobject dst_bitmap){
     jboolean isCopy;
     jbyte *img_src = env->GetByteArrayElements(src_yuv, &isCopy);
+    Mat yuv=Mat(src_pitch+src_pitch/2, src_width, CV_8UC1,img_src);
+    Mat rgba = Mat(src_pitch, src_width, CV_8UC4);
 
+    static int img_check=0;
+//    __android_log_print(ANDROID_LOG_DEBUG, "cvUtils", "yuvToBitmap");
+    if(isNV21)cvtColor(yuv, rgba, CV_YUV2RGBA_NV21);
+    else  cvtColor(yuv, rgba, CV_YUV2RGBA_NV12);
+    rgba=rgba(Rect(0,0,src_width,src_height));
 
-    Mat converted=YuvToBGR(img_src,src_width,src_height,src_pitch,isNV21);
-    AndroidBitmapInfo info;
-    if(AndroidBitmap_getInfo(env, dst_bitmap, &info)!=ANDROID_BITMAP_RESULT_SUCCESS)return false;
-    if(info.format!=ANDROID_BITMAP_FORMAT_RGBA_8888){
-        __android_log_print(ANDROID_LOG_ERROR, "nativeYuvToBitmap", "BitmapType!=RGBA_8888");
-        return false;
-    }
+    unsigned char *pDst;
+    if(AndroidBitmap_lockPixels(env, dst_bitmap, reinterpret_cast<void **>(&pDst))!=ANDROID_BITMAP_RESULT_SUCCESS)return false;
+    memcpy(pDst,rgba.data,sizeof(jbyte)*rgba.total()*rgba.elemSize());
+    AndroidBitmap_unlockPixels(env, dst_bitmap);
 
+    if(img_check==0)imwrite("/sdcard/img.jpg",rgba);
+    yuv.release();
+    rgba.release();
+
+    if(img_check<100)img_check++;
     return true;
 }
-JNI_METHOD(jboolean,nativeYuvCropRotateToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jboolean isNV21,jint src_width,jint src_height,jint src_pitch,const jintArray crop_area,jint rotate,
+JNI_METHOD(jboolean,yuvCropRotateToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jboolean isNV21,jint src_width,jint src_height,jint src_pitch,const jintArray crop_area,jint rotate,
              jobject dst_bytebuffer,jint dst_width,jint dst_height,jint dst_ch) {
     jboolean isCopy;
     jbyte *img_src = env->GetByteArrayElements(src_yuv, &isCopy);
@@ -91,7 +100,7 @@ JNI_METHOD(jboolean,nativeYuvCropRotateToRgb)(JNIEnv* env, jobject, const jbyteA
     return true;
     }
 
-JNI_METHOD(jboolean,nativeYuvToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jboolean isNV21,jint src_width,jint src_height,jint src_pitch,
+JNI_METHOD(jboolean,yuvToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jboolean isNV21,jint src_width,jint src_height,jint src_pitch,
                                 jobject dst_bytebuffer,jint dst_width,jint dst_height,jint dst_ch){
     jboolean isCopy;
     jbyte *img_src = env->GetByteArrayElements(src_yuv, &isCopy);
