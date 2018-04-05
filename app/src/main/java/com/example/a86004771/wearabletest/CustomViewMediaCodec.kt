@@ -12,6 +12,8 @@ import android.widget.CompoundButton
 import android.widget.SeekBar
 import android.widget.Switch
 import com.sonymobile.agent.robot.camera.CameraUtils
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.ByteBuffer
 
@@ -129,7 +131,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         lastSeekPosition = 0
     }
 
-
+private var didWriteBuffer=false
     internal fun onFrameCaptrueCtrl(nv12buffer: ByteArray, width: Int, height: Int, pitch: Int) {//
 //        Log.d("yama","width,height,pitch="+width+","+height+","+pitch)//ログ出すと激重
         onFrameChange?.invoke(nv12buffer, width, height, pitch)//コールバック
@@ -140,6 +142,28 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
             invalidate()
             mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
         })
+
+        if(!didWriteBuffer){
+            outputByteArray(nv12buffer)
+            didWriteBuffer=true
+        }
+
+    }
+
+    private fun outputByteArray(img: ByteArray) {
+
+        try {
+            val outputStream = FileOutputStream("/sdcard/Raw")
+            outputStream.write(img)
+            outputStream.close()
+        } catch (e: FileNotFoundException) {
+            e.printStackTrace()
+            Log.e("yama detectObject", e.toString())
+        } catch (e: IOException) {
+            e.printStackTrace()
+            Log.e("yama detectObject", e.toString())
+        }
+
     }
 
     public override fun onDraw(canvas: Canvas) {//Overlayの仕様に合わせている
@@ -161,11 +185,11 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         val imageSize = width * pitch
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val yBuffer = ByteBuffer.allocateDirect(imageSize)
-        val uBuffer = ByteBuffer.allocateDirect(imageSize / 2 - 1)
-        val vBuffer = ByteBuffer.allocateDirect(imageSize / 2 - 1)
+        val uBuffer = ByteBuffer.allocateDirect(imageSize / 2-1)
+        val vBuffer = ByteBuffer.allocateDirect(imageSize / 2-1)
         yBuffer.put(nv12, 0, imageSize)
-        uBuffer.put(nv12, imageSize, imageSize / 2 - 1)
-        vBuffer.put(nv12, imageSize + 1, imageSize / 2 - 1)
+        uBuffer.put(nv12, imageSize, imageSize / 2-1)
+        vBuffer.put(nv12, imageSize+1 , imageSize / 2-1 )
         CameraUtils.convertNv21ToBitmap(yBuffer, uBuffer, vBuffer, bitmap)
         return bitmap
     }
@@ -269,7 +293,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
                 when (outIndex) {
                     MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED -> Log.d("DecodeActivity", "INFO_OUTPUT_BUFFERS_CHANGED")
-                    MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> Log.d("DecodeActivity", "New format " + mDecoder!!.outputFormat)
+                    MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> Log.d("DecodeActivity", "New format " + mDecoder.outputFormat)
                     MediaCodec.INFO_TRY_AGAIN_LATER -> Log.d("DecodeActivity", "dequeueOutputBuffer timed out!")
                     else -> {
                         val buffer = mDecoder.getOutputBuffer(outIndex)
@@ -299,7 +323,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
                             }
 
                         }
-                        mDecoder!!.releaseOutputBuffer(outIndex, false)
+                        mDecoder.releaseOutputBuffer(outIndex, false)
                     }
                 }
 
@@ -310,7 +334,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
                 }
             }
             isPlaying = false
-            mDecoder!!.stop()
+            mDecoder.stop()
 
             //再生終了しても保持しておきたい
             //            mDecoder.release();
@@ -326,11 +350,11 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         fun seekTo(i: Long) {
             seeked = true
             Log.d(TAG, "SeekTo Requested to : $i")
-            Log.d(TAG, "SampleTime Before SeekTo : " + mExtractor!!.sampleTime / 1000)
-            mExtractor!!.seekTo(i * 1000, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
-            Log.d(TAG, "SampleTime After SeekTo : " + mExtractor!!.sampleTime / 1000)
+            Log.d(TAG, "SampleTime Before SeekTo : " + mExtractor.sampleTime / 1000)
+            mExtractor.seekTo(i * 1000, MediaExtractor.SEEK_TO_CLOSEST_SYNC)
+            Log.d(TAG, "SampleTime After SeekTo : " + mExtractor.sampleTime / 1000)
 
-            lastOffset = mExtractor!!.sampleTime / 1000
+            lastOffset = mExtractor.sampleTime / 1000
             startMs = System.currentTimeMillis()
             diff = lastOffset - lastPresentationTimeUs / 1000
 
