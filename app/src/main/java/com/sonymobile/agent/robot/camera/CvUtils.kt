@@ -14,8 +14,14 @@ class CvUtils{
         }
     }
 
+    companion object {
+        const val YUV_I420=0
+        const val YUV_NV12=1
+        const val YUV_NV21=2
+    }
 
-    external fun yuvCropRotateToRgb(src_yuv: ByteArray, isNV21: Boolean, src_width: Int, src_height: Int, src_pitch: Int, crop_area: IntArray, rotate: Int, dst: ByteBuffer, dst_width: Int, dst_height: Int, dst_ch: Int): Boolean
-    external fun yuvToRgb(src_yuv: ByteArray, isNV21: Boolean, src_width: Int, src_height: Int, src_pitch: Int, dst: ByteBuffer, dst_width: Int, dst_height: Int, dst_ch: Int): Boolean
-    external fun yuvToBitmap(src_yuv: ByteArray,isNV21:Boolean,src_wisth:Int,src_height:Int,src_pitch:Int,bitmap: Bitmap):Boolean
+
+    external fun yuvCropRotateToRgb(src_yuv: ByteArray, yuv_type: Int, src_width: Int, src_height: Int, src_pitch: Int, crop_area: IntArray, rotate: Int, dst: ByteBuffer, dst_width: Int, dst_height: Int, dst_ch: Int): Boolean
+    external fun yuvToRgb(src_yuv: ByteArray, yuv_type: Int, src_width: Int, src_height: Int, src_pitch: Int, dst: ByteBuffer, dst_width: Int, dst_height: Int, dst_ch: Int): Boolean
+    external fun yuvToBitmap(src_yuv: ByteArray,yuv_type:Int,src_wisth:Int,src_height:Int,src_pitch:Int,bitmap: Bitmap):Boolean
 }

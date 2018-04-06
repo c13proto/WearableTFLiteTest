@@ -28,7 +28,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
 
     private var VideoPath: String="android.resource://" + context.packageName + "/raw/" + R.raw.vga
-    private val VideoAFD=resources.openRawResourceFd(R.raw.vga)
+    private val VideoAFD=resources.openRawResourceFd(R.raw.dogmovie)
     private val TAG = "CustomViewMediaCodec"
     private var mPlayer: PlayerThread? = null
     private var mHandler: Handler?=null//Thread中でSeekBar扱うため
@@ -189,7 +189,7 @@ private var didWriteBuffer=false
 //        uBuffer.put(nv12, imageSize, imageSize / 2-1)
 //        vBuffer.put(nv12, imageSize+1 , imageSize / 2-1 )
 //        CameraUtils.convertNv21ToBitmap(yBuffer, uBuffer, vBuffer, bitmap)
-        CvUtils().yuvToBitmap(nv12,false,width,height,pitch,bitmap)
+        CvUtils().yuvToBitmap(nv12,CvUtils.YUV_I420,width,height,pitch,bitmap)
 
         return bitmap
     }

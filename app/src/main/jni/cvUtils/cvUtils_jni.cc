@@ -11,11 +11,11 @@ using namespace cv;
 #define JNI_METHOD(return_type, method_name) \
     extern "C" JNIEXPORT return_type JNICALL Java_com_sonymobile_agent_robot_camera_CvUtils_##method_name
 
-Mat YuvToBGR(jbyte* src,int width,int height, int pitch,bool isNV21);
+Mat YuvToBGR(jbyte* src,int width,int height, int pitch,int yuv_type);
 Mat YuvToGray(jbyte* src,int width,int height);
 
-
-JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,jboolean isNV21,jint src_width,jint src_height,jint src_pitch,jobject dst_bitmap){
+enum YUV{I420=0,NV12=1,NV21=2};
+JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,jint yuv_type,jint src_width,jint src_height,jint src_pitch,jobject dst_bitmap){
     jboolean isCopy;
     jbyte *img_src = env->GetByteArrayElements(src_yuv, &isCopy);
     Mat yuv=Mat(src_pitch+src_pitch/2, src_width, CV_8UC1,img_src);
@@ -23,8 +23,14 @@ JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,
 
     static int img_check=0;
 //    __android_log_print(ANDROID_LOG_DEBUG, "cvUtils", "yuvToBitmap");
-    if(isNV21)cvtColor(yuv, rgba, CV_YUV2RGBA_NV21);
-    else  cvtColor(yuv, rgba, CV_YUV2RGBA_NV12);
+    switch(yuv_type){
+        case YUV::I420 :cvtColor(yuv, rgba, CV_YUV2RGBA_I420);break;
+        case YUV ::NV12 :cvtColor(yuv, rgba, CV_YUV2RGBA_NV12);break;
+        case YUV ::NV21 :cvtColor(yuv, rgba, CV_YUV2RGBA_NV21);break;
+        default:
+            __android_log_print(ANDROID_LOG_ERROR, "yuvToBitmap","yuvTYPE incorrect!");
+            break;
+    }
     rgba=rgba(Rect(0,0,src_width,src_height));
 
     unsigned char *pDst;
@@ -33,9 +39,10 @@ JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,
     AndroidBitmap_unlockPixels(env, dst_bitmap);
 
     if(img_check==0){
-        Mat rgb=Mat(src_pitch,src_width,CV_8UC3);
-        cvtColor(yuv,rgb,CV_YUV2RGB);
-        imwrite("/sdcard/img.jpg",rgb);
+//        Mat rgb=Mat(src_pitch,src_width,CV_8UC3);
+//        cvtColor(yuv,rgb,CV_YUV2RGB_NV12);
+//        imwrite("/sdcard/img.jpg",rgb);
+//        rgb.release();
     }
     yuv.release();
     rgba.release();
@@ -43,7 +50,7 @@ JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,
     if(img_check<100)img_check++;
     return true;
 }
-JNI_METHOD(jboolean,yuvCropRotateToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jboolean isNV21,jint src_width,jint src_height,jint src_pitch,const jintArray crop_area,jint rotate,
+JNI_METHOD(jboolean,yuvCropRotateToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jint yuv_type,jint src_width,jint src_height,jint src_pitch,const jintArray crop_area,jint rotate,
              jobject dst_bytebuffer,jint dst_width,jint dst_height,jint dst_ch) {
     jboolean isCopy;
     jbyte *img_src = env->GetByteArrayElements(src_yuv, &isCopy);
@@ -67,7 +74,7 @@ JNI_METHOD(jboolean,yuvCropRotateToRgb)(JNIEnv* env, jobject, const jbyteArray s
 
     static int img_check;
     Mat converted;
-    if(dst_ch==3)converted=YuvToBGR(img_src,src_width,src_height,src_pitch,isNV21);
+    if(dst_ch==3)converted=YuvToBGR(img_src,src_width,src_height,src_pitch,yuv_type);
     else if(dst_ch==1)converted=YuvToGray(img_src,src_width,src_height);
     //        if(img_check==0)imwrite("/sdcard/Download/converted0.jpg",converted);
 
@@ -104,13 +111,13 @@ JNI_METHOD(jboolean,yuvCropRotateToRgb)(JNIEnv* env, jobject, const jbyteArray s
     return true;
     }
 
-JNI_METHOD(jboolean,yuvToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jboolean isNV21,jint src_width,jint src_height,jint src_pitch,
+JNI_METHOD(jboolean,yuvToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jint yuv_type,jint src_width,jint src_height,jint src_pitch,
                                 jobject dst_bytebuffer,jint dst_width,jint dst_height,jint dst_ch){
     jboolean isCopy;
     jbyte *img_src = env->GetByteArrayElements(src_yuv, &isCopy);
     uchar *img_dst = reinterpret_cast<uchar *>(env->GetDirectBufferAddress(dst_bytebuffer));
     Mat converted;
-    if(dst_ch==3)converted=YuvToBGR(img_src,src_width,src_height,src_pitch,isNV21);
+    if(dst_ch==3)converted=YuvToBGR(img_src,src_width,src_height,src_pitch,yuv_type);
     else if(dst_ch==1)converted=YuvToGray(img_src,src_width,src_height);
 
     static int img_check;
@@ -123,11 +130,18 @@ JNI_METHOD(jboolean,yuvToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jbo
     return true;
 }
 
-Mat YuvToBGR(jbyte* src,int width,int height, int pitch,bool isNV21){
+Mat YuvToBGR(jbyte* src,int width,int height, int pitch,int yuv_type){
     Mat yuv=Mat(pitch+pitch/2, width, CV_8UC1,src);
     Mat converted = Mat(pitch, width, CV_8UC3);
-    if(isNV21)cvtColor(yuv, converted, CV_YUV2BGR_NV21);
-    else cvtColor(yuv, converted, CV_YUV2BGR_NV12);
+
+    switch(yuv_type){
+        case YUV::I420 :cvtColor(yuv, converted, CV_YUV2BGR_I420);break;
+        case YUV ::NV12 :cvtColor(yuv, converted, CV_YUV2BGR_NV12);break;
+        case YUV ::NV21 :cvtColor(yuv, converted, CV_YUV2BGR_NV21);break;
+        default:
+            __android_log_print(ANDROID_LOG_ERROR, "yuvToBitmap","yuvTYPE incorrect!");
+            break;
+    }
     converted=converted(Rect(0,0,width,height));
     yuv.release();
     return converted;
