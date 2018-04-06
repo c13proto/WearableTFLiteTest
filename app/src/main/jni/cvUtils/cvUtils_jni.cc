@@ -32,7 +32,11 @@ JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,
     memcpy(pDst,rgba.data,sizeof(jbyte)*rgba.total()*rgba.elemSize());
     AndroidBitmap_unlockPixels(env, dst_bitmap);
 
-    if(img_check==0)imwrite("/sdcard/img.jpg",rgba);
+    if(img_check==0){
+        Mat rgb=Mat(src_pitch,src_width,CV_8UC3);
+        cvtColor(yuv,rgb,CV_YUV2RGB);
+        imwrite("/sdcard/img.jpg",rgb);
+    }
     yuv.release();
     rgba.release();
 

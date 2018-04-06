@@ -12,7 +12,6 @@ import android.widget.CompoundButton
 import android.widget.SeekBar
 import android.widget.Switch
 import com.sonymobile.agent.robot.camera.CvUtils
-import com.sonymobile.agent.robot.camera.CvUtilsK
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
@@ -58,7 +57,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         mSwitch=switch
 
         setupTestVideo(VideoPath)
-        mSwitch.setOnCheckedChangeListener(CompoundButton.OnCheckedChangeListener { buttonView, isChecked ->
+        mSwitch.setOnCheckedChangeListener({ _, isChecked ->
             // do something, the isChecked will be
             // true if the switch is in the On position
             Log.d("yama","OnCheckedChangeListener")
@@ -95,7 +94,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         mDrawScale=scale
         mDrawOffset.x= (((mDisplaySize.x.toFloat() - mVideoeSize.x * scale) / 2)/scale).toInt()//offsetもcaleに合わせる
         mDrawOffset.y= (((mDisplaySize.y.toFloat() - mVideoeSize.y * scale) / 2)/scale).toInt()
-        Log.d("yama calculateDrawScale","scale="+mDrawScale)
+        Log.d("yama calculateDrawScale", "scale=$mDrawScale")
         Log.d("yama calculateDrawScale","display="+mDisplaySize.x+","+mDisplaySize.y)
         Log.d("yama calculateDrawScale","video="+mVideoeSize.x+","+mVideoeSize.y)
         Log.d("yama calculateDrawScale","offset="+mDrawOffset.x+","+mDrawOffset.y)
@@ -190,7 +189,8 @@ private var didWriteBuffer=false
 //        uBuffer.put(nv12, imageSize, imageSize / 2-1)
 //        vBuffer.put(nv12, imageSize+1 , imageSize / 2-1 )
 //        CameraUtils.convertNv21ToBitmap(yBuffer, uBuffer, vBuffer, bitmap)
-        CvUtils.nativeYuvToBitmap(nv12,false,width,height,pitch,bitmap)
+        CvUtils().yuvToBitmap(nv12,false,width,height,pitch,bitmap)
+
         return bitmap
     }
     inner class PlayerThread(var mCustomViewMediaCodec: CustomViewMediaCodec) : Thread() {
