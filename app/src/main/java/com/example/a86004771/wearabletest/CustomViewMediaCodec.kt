@@ -23,12 +23,12 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
     companion object {//コールバック関係
         var onStop:(() -> Unit)? = null
-        var onFrameChange: ((nv12Buffer:ByteArray ,width:Int,height:Int,pitch:Int) -> Unit)?=null
+        var onFrameChange: ((i420Buffer:ByteArray ,width:Int,height:Int,pitch:Int) -> Unit)?=null
     }
 
 
     private var VideoPath: String="android.resource://" + context.packageName + "/raw/" + R.raw.qvga
-    private val VideoAFD=resources.openRawResourceFd(R.raw.qvga)
+    private val VideoAFD=resources.openRawResourceFd(R.raw.vga)
     private val TAG = "CustomViewMediaCodec"
     private var mPlayer: PlayerThread? = null
     private var mHandler: Handler?=null//Thread中でSeekBar扱うため
@@ -130,19 +130,19 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     }
 
 private var didWriteBuffer=false
-    internal fun onFrameCaptrueCtrl(nv12buffer: ByteArray, width: Int, height: Int, pitch: Int) {//
+    internal fun onFrameCaptrueCtrl(i420buffer: ByteArray, width: Int, height: Int, pitch: Int) {//
 //        Log.d("yama","width,height,pitch="+width+","+height+","+pitch)//ログ出すと激重
-        onFrameChange?.invoke(nv12buffer, width, height, pitch)//コールバック
+        onFrameChange?.invoke(i420buffer, width, height, pitch)//コールバック
 
         mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
         mHandler!!.post({
-            updateFrame(nv12buffer, width, height, pitch)
+            updateFrame(i420buffer, width, height, pitch)
             invalidate()
             mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
         })
 
         if(!didWriteBuffer){
-            outputByteArray(nv12buffer)
+            outputByteArray(i420buffer)
             didWriteBuffer=true
         }
 
@@ -172,14 +172,14 @@ private var didWriteBuffer=false
         }
     }
 
-    internal fun updateFrame(nv12buffer: ByteArray, width: Int, height: Int, pitch: Int) {
+    internal fun updateFrame(i420buffer: ByteArray, width: Int, height: Int, pitch: Int) {
         synchronized(mlock) {
             mFrame?.recycle()
-            mFrame = convertNv12ToBitmap(nv12buffer, width, height, pitch)
+            mFrame = convertI420ToBitmap(i420buffer, width, height, pitch)
         }
     }
 
-    private fun convertNv12ToBitmap(nv12: ByteArray, width: Int, height: Int, pitch: Int): Bitmap {
+    private fun convertI420ToBitmap(i420buffer: ByteArray, width: Int, height: Int, pitch: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
 //        val imageSize = width * pitch
 //        val yBuffer = ByteBuffer.allocateDirect(imageSize)
@@ -189,7 +189,7 @@ private var didWriteBuffer=false
 //        uBuffer.put(nv12, imageSize, imageSize / 2-1)
 //        vBuffer.put(nv12, imageSize+1 , imageSize / 2-1 )
 //        CameraUtils.convertNv21ToBitmap(yBuffer, uBuffer, vBuffer, bitmap)
-        CvUtils().yuvToBitmap(nv12,CvUtils.YUV_I420,width,height,pitch,bitmap)
+        CvUtils().yuvToBitmap(i420buffer,CvUtils.YUV_I420,width,height,pitch,bitmap)
 
         return bitmap
     }

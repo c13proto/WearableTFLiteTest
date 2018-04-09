@@ -120,12 +120,14 @@ JNI_METHOD(jboolean,yuvToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jin
     if(dst_ch==3)converted=YuvToBGR(img_src,src_width,src_height,src_pitch,yuv_type);
     else if(dst_ch==1)converted=YuvToGray(img_src,src_width,src_height);
 
-    static int img_check;
+    static int img_check=0;
     resize(converted,converted,Size(dst_width,dst_height));
     memcpy(img_dst,converted.data,sizeof(jbyte)*converted.total()*converted.elemSize());
+    if(img_check==0)imwrite("/sdcard/yuvToRgb.jpg",converted);
     converted.release();
 
     env->ReleaseByteArrayElements(src_yuv, img_src, JNI_ABORT);
+
     if(img_check<=10)img_check++;
     return true;
 }
