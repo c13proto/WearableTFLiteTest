@@ -27,8 +27,8 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     }
 
 
-    private var VideoPath: String="android.resource://" + context.packageName + "/raw/" + R.raw.vga
-    private val VideoAFD=resources.openRawResourceFd(R.raw.dogmovie)
+    private var VideoPath: String="android.resource://" + context.packageName + "/raw/" + R.raw.qvga
+    private val VideoAFD=resources.openRawResourceFd(R.raw.qvga)
     private val TAG = "CustomViewMediaCodec"
     private var mPlayer: PlayerThread? = null
     private var mHandler: Handler?=null//Thread中でSeekBar扱うため

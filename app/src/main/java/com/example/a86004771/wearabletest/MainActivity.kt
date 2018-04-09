@@ -49,6 +49,8 @@ class MainActivity : WearableActivity()
 //        videoView.setVideoURI(videoURI)
         video_preview.setupCustomViewMediaCodec(seekBar_videoPos,video_sw)
 
+        val detectorTest=DetectorTest(this)
+
 
 
 //        // Enables Always-on

@@ -5,16 +5,16 @@ import android.util.Log
 import java.nio.ByteBuffer
 
 class CvUtils{
-    init {
-        try {
-            System.loadLibrary("cvUtils")
-            Log.d("yama cvUtils", "LibraryInit")
-        } catch (noLibraryFound: UnsatisfiedLinkError) {
-            Log.e("yama cvUtils", "noLibraryNotFound")
-        }
-    }
 
     companion object {
+        init {
+            try {
+                System.loadLibrary("cvUtils")
+                Log.d("yama cvUtils", "LibraryInit")
+            } catch (noLibraryFound: UnsatisfiedLinkError) {
+                Log.e("yama cvUtils", "noLibraryNotFound")
+            }
+        }
         const val YUV_I420=0
         const val YUV_NV12=1
         const val YUV_NV21=2
