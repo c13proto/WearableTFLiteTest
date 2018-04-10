@@ -13,7 +13,8 @@ using namespace cv;
 
 Mat YuvToBGR(jbyte* src,int width,int height, int pitch,int yuv_type);
 Mat YuvToGray(jbyte* src,int width,int height);
-
+Mat bytearrayToMat(const uchar* img,int width,int height,int ch);
+bool ImageOutput(const uchar *img,int height,int width,int ch,char* filename);
 enum YUV{I420=0,NV12=1,NV21=2};
 JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,jint yuv_type,jint src_width,jint src_height,jint src_pitch,jobject dst_bitmap){
     jboolean isCopy;
@@ -131,6 +132,89 @@ JNI_METHOD(jboolean,yuvToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jin
     if(img_check<=10)img_check++;
     return true;
 }
+JNI_METHOD(jboolean,getMotionArea)(JNIEnv* env,jobject, const jobject nwImg,const jobject preImg, jint width, jint height,jintArray rect) {
+    uchar* img1 = reinterpret_cast<uchar*>(env->GetDirectBufferAddress(nwImg));
+    uchar* img2 = reinterpret_cast<uchar*>(env->GetDirectBufferAddress(preImg));
+    Mat gray1=bytearrayToMat(img1,width,height,1);
+    Mat gray2=bytearrayToMat(img2,width,height,1);
+    Mat dst= Mat(height, width, CV_8UC1);
+//    __android_log_print(ANDROID_LOG_DEBUG, "getMotionArea","1");
+        static int img_check;
+//        if(img_check==0){
+//            ImageOutput(img1,height,width,1,"/sdcard/Download/img1.jpg");
+//            ImageOutput(img2,height,width,1,"/sdcard/Download/img2.jpg");
+//        }
+        if(img_check<=10)img_check++;
+//    auto t1 = std::chrono::system_clock::now();
+    absdiff(gray1,gray2,dst);//差分
+    gray1.release();gray2.release();
+    double ave=mean(dst)[0];//輝度値が低かったら
+//    __android_log_print(ANDROID_LOG_DEBUG, "yama", "ave=%f",ave);
+    if(ave<0.5 || ave>10){//変化が乏しいか大きすぎるときは動いている領域が無いと判断
+//            __android_log_print(ANDROID_LOG_ERROR, "getMotionArea","return ave %f",ave);
+        return false;
+    }
+    threshold(dst,dst,0,255,THRESH_OTSU);//2値化(パラメータ値最適化できるかもしれないがとりあえず大津で)
+    blur(dst,dst,Size(9,9));//平滑化
+    threshold(dst,dst,0,255,THRESH_OTSU);//ごみを消す
+//    auto t2 = std::chrono::system_clock::now();
+
+    // 輪郭の検出
+    std::vector<std::vector<Point> > contours;
+    findContours(dst, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+    dst.release();
+//    auto t3 = std::chrono::system_clock::now();
+//    __android_log_print(ANDROID_LOG_ERROR, "yama contours.size:","%d",contours.size()) ;
+    if(contours.size()<=0 || contours.size()>10) {
+//            __android_log_print(ANDROID_LOG_ERROR, "getMotionArea","return size %d",contours.size());
+        return false;//輪郭取れなかったときはリターン、多すぎるときも信頼性下がるのでリターン（速度的にも後の処理が重くなる）
+    }
+    // 最大面積の領域をピックアップ
+    int maxContourIndex=0;
+    double max_area=0;
+    for(int i=0;i<contours.size();i++){
+        double area=contourArea(contours[i]);
+        if(area>max_area){
+            max_area=area;
+            maxContourIndex=i;
+        }
+    }
+    Rect maxRect = boundingRect(contours[maxContourIndex]);
+
+//    if(maxRect.height>height/2||maxRect.width>width/2){
+////            __android_log_print(ANDROID_LOG_ERROR, "getMotionArea","src h,w=%d,%dresult height,width=%d,%d ",height,width,result.Height,result.Width);
+//        return false;
+//    }
+
+    jint *rectPtr=env->GetIntArrayElements(rect,0);
+    rectPtr[0]=maxRect.x;
+    rectPtr[1]=maxRect.y;
+    rectPtr[2]=maxRect.width;
+    rectPtr[3]=maxRect.height;
+    env->ReleaseIntArrayElements(rect, rectPtr, 0);
+
+//    __android_log_print(ANDROID_LOG_ERROR, "getMotionArea","src h,w=%d,%dresult height,width=%d,%d ",height,width,maxRect.width,maxRect.height);
+
+#ifdef IMAGE_OUT_DEBUG
+    static int counter=0;
+        if(counter==10) {
+            ImageOutput(img1,height,width,1,"/sdcard/Download/img1.jpg");
+            Mat debug = Mat(height, width, CV_8UC3, (0, 0, 0));
+            for (size_t idx = 0; idx < contours.size(); idx++) {
+                CvScalar color = CV_RGB(rand() & 255, rand() & 255, rand() & 255);
+                drawContours(debug, contours, idx, color, -1);
+            }
+            rectangle(debug, maxRect, Scalar(0, 0, 255), 2);
+            imwrite("/sdcard/Download/dst.jpg", dst);
+            imwrite("/sdcard/Download/debug.jpg", debug);
+            debug.release();
+        }
+        if(counter<100)counter++;
+#endif
+
+
+    return true;
+}
 
 Mat YuvToBGR(jbyte* src,int width,int height, int pitch,int yuv_type){
     Mat yuv=Mat(pitch+pitch/2, width, CV_8UC1,src);
@@ -152,3 +236,20 @@ Mat YuvToGray(jbyte* src,int width,int height){
     return Mat(height, width, CV_8UC1,src);
 }
 
+Mat bytearrayToMat(const uchar* img,int width,int height,int ch){
+    Mat mat;
+    if (ch == 1) mat = Mat(height,width, CV_8UC1,const_cast<uchar*>(img));
+    else if(ch == 3)mat = Mat(height, width, CV_8UC3,const_cast<uchar*>(img));
+    return mat;
+}
+bool ImageOutput(const uchar *img,int height,int width,int ch,char* filename) {
+
+    Mat mat=bytearrayToMat(img,width,height,ch);
+    bool ret=imwrite(filename,mat);
+    if(!ret) __android_log_print(ANDROID_LOG_ERROR, "ImageOut fail", "%s",filename);
+    else  __android_log_print(ANDROID_LOG_ERROR, "ImageOut success", "%s",filename);
+
+    mat.release();
+
+    return ret;
+}

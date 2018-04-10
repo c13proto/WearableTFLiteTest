@@ -24,6 +24,11 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     companion object {//コールバック関係
         var onStop:(() -> Unit)? = null
         var onFrameChange: ((i420Buffer:ByteArray ,width:Int,height:Int,pitch:Int) -> Unit)?=null
+
+        val mVideoeSize=Point()
+        val mDisplaySize=Point()
+        val mDrawOffset=Point()
+        var mDrawScale=1f
     }
 
 
@@ -38,18 +43,19 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     private lateinit var mPaint: Paint
     private val mlock = Any()
     private var lastSeekPosition = 0L
-    private val mVideoeSize=Point()
-    private val mDisplaySize=Point()
-    private val mDrawOffset=Point()
-    private var mDrawScale=1f
+
+
+
     private lateinit var mSeekbar: SeekBar
     private lateinit var mSwitch: Switch
+    private var preOnDraw=0L
 
     fun setupCustomViewMediaCodec(seekBar: SeekBar,switch: Switch){//extensionではnullになったのでmainActivityから渡している
         Log.d("yama","setupCustomViewMediaCodec")
         mHandler=Handler()
         mPaint=Paint()
         mPaint.color= Color.BLACK
+        mPaint.textSize=50f
         val manager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         manager.defaultDisplay.getSize(mDisplaySize)
 
@@ -141,10 +147,10 @@ private var didWriteBuffer=false
             mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
         })
 
-        if(!didWriteBuffer){
-            outputByteArray(i420buffer)
-            didWriteBuffer=true
-        }
+//        if(!didWriteBuffer){
+//            outputByteArray(i420buffer)
+//            didWriteBuffer=true
+//        }
 
     }
 
@@ -166,10 +172,15 @@ private var didWriteBuffer=false
 
     public override fun onDraw(canvas: Canvas) {//Overlayの仕様に合わせている
 
+//        Log.d("yama","onDrawFPS=${1000f/(System.currentTimeMillis()-preOnDraw)}")
+//        val FPS=1000f/(System.currentTimeMillis()-preOnDraw)
+//        preOnDraw=System.currentTimeMillis()
         if (mFrame != null) {
             canvas.scale(mDrawScale, mDrawScale)
             canvas.drawBitmap(mFrame,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat(), mPaint)
+//            canvas.drawText(FPS.toString(),mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat()+20f,mPaint)
         }
+
     }
 
     internal fun updateFrame(i420buffer: ByteArray, width: Int, height: Int, pitch: Int) {
@@ -275,7 +286,7 @@ private var didWriteBuffer=false
                             mDecoder.queueInputBuffer(inIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             isEOS = true
                         } else {
-                            Log.d(TAG, "Queue Input Buffer at position: " + mBufferInfo!!.presentationTimeUs)
+//                            Log.d(TAG, "Queue Input Buffer at position: " + mBufferInfo!!.presentationTimeUs)
                             mDecoder.queueInputBuffer(inIndex, 0, sampleSize, mExtractor.sampleTime, 0)
                             mExtractor.advance()
                         }
@@ -307,7 +318,7 @@ private var didWriteBuffer=false
                         //                        We use a very simple clock to keep the video FPS, or the video
                         //                        playback will be too fast
 
-                        Log.d(TAG, "Original Presentation time: " + mBufferInfo!!.presentationTimeUs / 1000 + ", Diff PT: " + (mBufferInfo!!.presentationTimeUs / 1000 - lastOffset) + " : System Time: " + (System.currentTimeMillis() - startMs))
+//                        Log.d(TAG, "Original Presentation time: " + mBufferInfo!!.presentationTimeUs / 1000 + ", Diff PT: " + (mBufferInfo!!.presentationTimeUs / 1000 - lastOffset) + " : System Time: " + (System.currentTimeMillis() - startMs))
 
                         lastPresentationTimeUs = mBufferInfo!!.presentationTimeUs
 
