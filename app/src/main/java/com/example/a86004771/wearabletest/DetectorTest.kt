@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Looper
 import android.os.Process
 import android.util.Log
 import com.sonymobile.agent.robot.camera.CvUtils
@@ -31,7 +32,7 @@ class DetectorTest {
     private var mDetector: GeneralObjectDetector? = null
     private var mDetectorBuffer: ByteBuffer? = null//rgb
     private var mPreGrayBuffer: ByteBuffer? = null//gray motion検知のため
-
+    private var mCallerHandler: Handler? = null
     private var mDetectionThread: HandlerThread? = null
     private var mDetectionHandler: Handler? = null
 
@@ -82,6 +83,7 @@ class DetectorTest {
 
         CustomViewMediaCodec.onFrameChange = { i420Buffer, width, height, pitch ->
             //            Log.d("yama setupDetectingTask","width=${width}")
+
             if (!isDetectionReady) {
                 allocateWorkingBuffer()
                 startHandler()
@@ -113,7 +115,8 @@ class DetectorTest {
 
     private fun startHandler() {
         synchronized(mlock) {
-
+            if (mCallerHandler == null)
+                mCallerHandler = Handler(Looper.getMainLooper())//mainにコールバックするやつ
             if (mDetectionThread == null) {//ObjectTrackerが継承しているDetectorに習ってスレッド作成
                 mDetectionThread = HandlerThread(this.javaClass.simpleName + " Thread", Process.THREAD_PRIORITY_DISPLAY)
                 mDetectionThread!!.start()
@@ -159,7 +162,12 @@ class DetectorTest {
             }
             val objects = detectObject(mDetectorBuffer!!)
             setDebugArea(objects)
-            onDetectorResultCallback?.invoke(objects)
+            onDetectorResultCallback?.invoke(objects)//TaskたまりすぎてUIスレッドだと要求が通らない？
+//            mCallerHandler!!.post{
+//                Runnable {onDetectorResultCallback?.invoke(objects) }
+//
+//            }
+
         }
 
         private fun setDebugArea(objects: ArrayList<DetectedObject>) {
@@ -232,11 +240,11 @@ class DetectorTest {
             CvUtils().yuvToRgb(orgI420Bytearray, CvUtils.YUV_I420, orgImageWidth, orgImageHeight, orgImagePitch, grayBuffer, motionImageWidth, motionImageHeight, 1)
 
             if (canMotionDetection) {
-                val t1 = System.currentTimeMillis()
+//                val t1 = System.currentTimeMillis()
                 val motionArea = intArrayOf(0, 0, 0, 0)
 
                 if (CvUtils().getMotionArea(grayBuffer, mPreGrayBuffer!!, motionImageWidth, motionImageHeight, motionArea)) {
-                    Log.d("yama", "motionDetect:" + (System.currentTimeMillis() - t1) + "ms")
+//                    Log.d("yama", "motionDetect:" + (System.currentTimeMillis() - t1) + "ms")
                     val scaleX=orgImageWidth.toFloat()/motionImageWidth
                     val scaleY=orgImageHeight.toFloat()/motionImageHeight
                     mMotionArea[0]=(motionArea[0]*scaleX).toInt()
@@ -262,17 +270,19 @@ class DetectorTest {
             if (isMotionAreaEnable()) {//中心から、全体領域の4分割した枠の大きさを探索させてみる
                 custom_crop_ctrl(mMotionArea[0], mMotionArea[1], mMotionArea[2], mMotionArea[3], 1 / 2.0f, crop_square)
                 mPreviousCropArea = CropArea.Motion
-            } else if (mPreviousCropArea == CropArea.Original) {
-                if (crop_square) setCropArea_Square(CropArea.Center) else setCropArea_Rect(CropArea.Center)
-            } else if (mPreviousCropArea == CropArea.Center) {
-                if (crop_square) setCropArea_Square(CropArea.TopLeft) else setCropArea_Rect(CropArea.TopLeft)
-            } else if (mPreviousCropArea == CropArea.TopLeft) {
-                if (crop_square) setCropArea_Square(CropArea.TopRight) else setCropArea_Rect(CropArea.TopRight)
-            } else if (mPreviousCropArea == CropArea.TopRight) {
-                if (crop_square) setCropArea_Square(CropArea.BotLeft) else setCropArea_Rect(CropArea.BotLeft)
-            } else if (mPreviousCropArea == CropArea.BotLeft) {
-                if (crop_square) setCropArea_Square(CropArea.BotRight) else setCropArea_Rect(CropArea.BotRight)
-            } else {
+            }
+//            else if (mPreviousCropArea == CropArea.Original) {
+//                if (crop_square) setCropArea_Square(CropArea.Center) else setCropArea_Rect(CropArea.Center)
+//            } else if (mPreviousCropArea == CropArea.Center) {
+//                if (crop_square) setCropArea_Square(CropArea.TopLeft) else setCropArea_Rect(CropArea.TopLeft)
+//            } else if (mPreviousCropArea == CropArea.TopLeft) {
+//                if (crop_square) setCropArea_Square(CropArea.TopRight) else setCropArea_Rect(CropArea.TopRight)
+//            } else if (mPreviousCropArea == CropArea.TopRight) {
+//                if (crop_square) setCropArea_Square(CropArea.BotLeft) else setCropArea_Rect(CropArea.BotLeft)
+//            } else if (mPreviousCropArea == CropArea.BotLeft) {
+//                if (crop_square) setCropArea_Square(CropArea.BotRight) else setCropArea_Rect(CropArea.BotRight)
+//            }
+            else {
                 if (crop_square) setCropArea_Square(CropArea.Original) else setCropArea_Rect(CropArea.Original)
             }
             //            Log.d("yama","State="+mPreviousCropArea+"mCropArea="+mCropArea[0]+","+mCropArea[1]+","+mCropArea[2]+","+mCropArea[3]);
@@ -298,7 +308,8 @@ class DetectorTest {
             centerY = y + h / 2 - search_y
 
             if (square) {
-                val side = if (search_w < search_h) (search_w * scale).toInt() else (search_h * scale).toInt()
+                var side = if (search_w < search_h) (search_w * scale).toInt() else (search_h * scale).toInt()
+                if(side<detectionImageWidth)side=detectionImageWidth
                 left = (centerX - side / 2.0).toInt()
                 top = (centerY - side / 2.0).toInt()
                 right = (centerX + side / 2.0).toInt()

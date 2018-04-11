@@ -22,10 +22,10 @@
         android:id="@+id/video_preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
-    <com.example.a86004771.wearabletest.OverlayView
-        android:id="@+id/overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+    <!--<com.example.a86004771.wearabletest.OverlayView-->
+        <!--android:id="@+id/overlay"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"/>-->
     <Switch
         android:id="@+id/video_sw"
         android:layout_width="wrap_content"

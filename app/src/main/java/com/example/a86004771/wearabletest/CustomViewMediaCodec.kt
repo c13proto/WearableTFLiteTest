@@ -12,9 +12,11 @@ import android.widget.CompoundButton
 import android.widget.SeekBar
 import android.widget.Switch
 import com.sonymobile.agent.robot.camera.CvUtils
+import com.sonymobile.agent.robot.camera.DetectedObject
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.ArrayList
 
 
 class CustomViewMediaCodec @JvmOverloads
@@ -40,7 +42,8 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 //    private var isVideoFileExist = false
 
     private var mFrame: Bitmap?=null
-    private lateinit var mPaint: Paint
+    private val mPaint=Paint()
+    val detectedObjects = ArrayList<DetectedObject>()
     private val mlock = Any()
     private var lastSeekPosition = 0L
 
@@ -53,8 +56,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     fun setupCustomViewMediaCodec(seekBar: SeekBar,switch: Switch){//extensionではnullになったのでmainActivityから渡している
         Log.d("yama","setupCustomViewMediaCodec")
         mHandler=Handler()
-        mPaint=Paint()
-        mPaint.color= Color.BLACK
+        mPaint.style = Paint.Style.STROKE
         mPaint.textSize=50f
         val manager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         manager.defaultDisplay.getSize(mDisplaySize)
@@ -63,6 +65,8 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         mSwitch=switch
 
         setupTestVideo(VideoPath)
+        setupDetectorCallback()
+
         mSwitch.setOnCheckedChangeListener({ _, isChecked ->
             // do something, the isChecked will be
             // true if the switch is in the On position
@@ -70,6 +74,15 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
             if(isChecked)start()
             else pause()
         })
+
+    }
+    private fun setupDetectorCallback(){
+        DetectorTest.onDetectorResultCallback={
+            detectedObjects.clear()
+            for(obj: DetectedObject in it){
+                detectedObjects.add(obj)
+            }
+        }
     }
 
 
@@ -176,11 +189,27 @@ private var didWriteBuffer=false
 //        val FPS=1000f/(System.currentTimeMillis()-preOnDraw)
 //        preOnDraw=System.currentTimeMillis()
         if (mFrame != null) {
-            canvas.scale(mDrawScale, mDrawScale)
-            canvas.drawBitmap(mFrame,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat(), mPaint)
+            drawFrame(canvas)
 //            canvas.drawText(FPS.toString(),mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat()+20f,mPaint)
+            drawRect(canvas)
         }
 
+    }
+    private fun drawFrame(canvas: Canvas){
+        canvas.scale(mDrawScale, mDrawScale)
+        canvas.drawBitmap(mFrame,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat(), mPaint)
+    }
+    private fun drawRect(canvas: Canvas){
+        for(obj:DetectedObject in detectedObjects){
+            when(obj.name()){
+                "searching"->mPaint.color=Color.RED
+                "motion"->mPaint.color=Color.BLUE
+                else->mPaint.color=Color.YELLOW
+            }
+            val drawRect=Rect(obj.xPosition(),obj.yPosition(),obj.xPosition()+obj.width(),obj.yPosition()+obj.height())
+            drawRect.offset(mDrawOffset.x, mDrawOffset.y)
+            canvas.drawRect(drawRect,mPaint)
+        }
     }
 
     internal fun updateFrame(i420buffer: ByteArray, width: Int, height: Int, pitch: Int) {
