@@ -26,6 +26,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     companion object {//コールバック関係
         var onStop:(() -> Unit)? = null
         var onFrameChange: ((i420Buffer:ByteArray ,width:Int,height:Int,pitch:Int) -> Unit)?=null
+        var onFrameChangeBitmap:((bitmap:Bitmap)->Unit)?=null
 
         val mVideoeSize=Point()
         val mDisplaySize=Point()
@@ -34,16 +35,20 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     }
 
 
-    private var VideoPath: String="android.resource://" + context.packageName + "/raw/" + R.raw.qvga
-    private val VideoAFD=resources.openRawResourceFd(R.raw.vga)
+//    private var VideoPath: String="android.resource://" + context.packageName + "/raw/" + R.raw.qvga
+    private val VideoAFD=resources.openRawResourceFd(R.raw.qvga)
     private val TAG = "CustomViewMediaCodec"
     private var mPlayer: PlayerThread? = null
     private var mHandler: Handler?=null//Thread中でSeekBar扱うため
 //    private var isVideoFileExist = false
 
     private var mFrame: Bitmap?=null
-    private val mPaint=Paint()
+    private val mPaintRect=Paint()
+    private val mPaintText=Paint()
+    private val textSize=25f
     val detectedObjects = ArrayList<DetectedObject>()
+    val classifierResult=ArrayList<String>()
+
     private val mlock = Any()
     private var lastSeekPosition = 0L
 
@@ -56,16 +61,21 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     fun setupCustomViewMediaCodec(seekBar: SeekBar,switch: Switch){//extensionではnullになったのでmainActivityから渡している
         Log.d("yama","setupCustomViewMediaCodec")
         mHandler=Handler()
-        mPaint.style = Paint.Style.STROKE
-        mPaint.textSize=50f
+
+        mPaintRect.style = Paint.Style.STROKE
+
+        mPaintText.color=Color.GREEN
+        mPaintText.textSize=textSize
+
         val manager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         manager.defaultDisplay.getSize(mDisplaySize)
 
         mSeekbar=seekBar
         mSwitch=switch
 
-        setupTestVideo(VideoPath)
+        setupTestVideo()
         setupDetectorCallback()
+        setupClassifierCallback()
 
         mSwitch.setOnCheckedChangeListener({ _, isChecked ->
             // do something, the isChecked will be
@@ -84,9 +94,17 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
             }
         }
     }
+    private fun setupClassifierCallback(){
+        ImageClassifierTest.onClassifierResultCallback={
+            classifierResult.clear()
+            for(row:String in it){
+                classifierResult.add(row)
+            }
+        }
+    }
 
 
-    private fun setupTestVideo(videoPath: String) {
+    private fun setupTestVideo() {
         val retriever = MediaMetadataRetriever()
 
         retriever.setDataSource(VideoAFD.fileDescriptor,VideoAFD.startOffset,VideoAFD.length)
@@ -95,7 +113,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         mVideoeSize.y = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT))
         retriever.release()
         calculateDrawScale()
-        setVideoPath(videoPath)
+        setVideoPath()
 
 
     }
@@ -142,9 +160,9 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         onStop?.invoke()
     }
 
-    private fun setVideoPath(videoPath: String) {
+    private fun setVideoPath() {
         mPlayer?.pause()
-        VideoPath = videoPath
+//        VideoPath = videoPath
         lastSeekPosition = 0
     }
 
@@ -190,47 +208,50 @@ private var didWriteBuffer=false
 //        preOnDraw=System.currentTimeMillis()
         if (mFrame != null) {
             drawFrame(canvas)
-//            canvas.drawText(FPS.toString(),mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat()+20f,mPaint)
+            //            canvas.drawText(FPS.toString(),mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat()+20f,mPaint)
             drawRect(canvas)
+            drawClassifer(canvas)
         }
 
     }
     private fun drawFrame(canvas: Canvas){
         canvas.scale(mDrawScale, mDrawScale)
-        canvas.drawBitmap(mFrame,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat(), mPaint)
+        canvas.drawBitmap(mFrame,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat(), mPaintRect)
     }
     private fun drawRect(canvas: Canvas){
         for(obj:DetectedObject in detectedObjects){
             when(obj.name()){
-                "searching"->mPaint.color=Color.RED
-                "motion"->mPaint.color=Color.BLUE
-                else->mPaint.color=Color.YELLOW
+                "searching"->mPaintRect.color=Color.RED
+                "motion"->mPaintRect.color=Color.BLUE
+                else->mPaintRect.color=Color.YELLOW
             }
             val drawRect=Rect(obj.xPosition(),obj.yPosition(),obj.xPosition()+obj.width(),obj.yPosition()+obj.height())
             drawRect.offset(mDrawOffset.x, mDrawOffset.y)
-            canvas.drawRect(drawRect,mPaint)
+            canvas.drawRect(drawRect,mPaintRect)
         }
+    }
+    private fun drawClassifer(canvas: Canvas){
+        var offset=0f
+        for(row:String in classifierResult){
+            canvas.drawText(row,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat()+20f+offset,mPaintText)
+            offset+=textSize
+        }
+
     }
 
     internal fun updateFrame(i420buffer: ByteArray, width: Int, height: Int, pitch: Int) {
         synchronized(mlock) {
             mFrame?.recycle()
             mFrame = convertI420ToBitmap(i420buffer, width, height, pitch)
+//            CvUtils().yuvToBitmap(i420buffer, CvUtils.YUV_I420,width,height,pitch,mFrame!!)
+//            onFrameChangeBitmap?.invoke(mFrame!!)
         }
+
     }
 
     private fun convertI420ToBitmap(i420buffer: ByteArray, width: Int, height: Int, pitch: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-//        val imageSize = width * pitch
-//        val yBuffer = ByteBuffer.allocateDirect(imageSize)
-//        val uBuffer = ByteBuffer.allocateDirect(imageSize / 2-1)
-//        val vBuffer = ByteBuffer.allocateDirect(imageSize / 2-1)
-//        yBuffer.put(nv12, 0, imageSize)
-//        uBuffer.put(nv12, imageSize, imageSize / 2-1)
-//        vBuffer.put(nv12, imageSize+1 , imageSize / 2-1 )
-//        CameraUtils.convertNv21ToBitmap(yBuffer, uBuffer, vBuffer, bitmap)
         CvUtils().yuvToBitmap(i420buffer,CvUtils.YUV_I420,width,height,pitch,bitmap)
-
         return bitmap
     }
     inner class PlayerThread(var mCustomViewMediaCodec: CustomViewMediaCodec) : Thread() {

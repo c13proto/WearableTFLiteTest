@@ -156,7 +156,7 @@ class DetectorTest {
         override fun run() {
             motionDetectCtrl()
             cropAreaCtrl(detectionImageHeight == detectionImageWidth)
-            if (!CvUtils().yuvCropRotateToRgb(orgI420Bytearray, CvUtils.YUV_I420, orgImageWidth, orgImageHeight, orgImagePitch,mCropArea,0, mDetectorBuffer!!, detectionImageWidth, detectionImageHeight, 3)) {
+            if (!CvUtils().yuvCropRotateToRgb(orgI420Bytearray, CvUtils.YUV_I420, orgImageWidth, orgImageHeight,orgImagePitch ,mCropArea,0, mDetectorBuffer!!, detectionImageWidth, detectionImageHeight, 3)) {
                 Log.e(TAG, "Failed to create image nativeImageCrop")
                 return
             }
@@ -188,10 +188,10 @@ class DetectorTest {
         }
 
         private fun detectObject(rgb_img: ByteBuffer): ArrayList<DetectedObject> {
-//                        if(outdebug_count==0){
-//                            outputBytebuffer(rgb_img)
-//                            outdebug_count++
-//                        }
+                        if(outdebug_count<=100){
+                            if(outdebug_count==99)outputBytebuffer(rgb_img,"/sdcard/rgbRaw"+outdebug_count)
+                            outdebug_count++
+                        }
 //            val t1 = System.currentTimeMillis()
             val result: List<GeneralDetectedObject> = mDetector!!.detect(rgb_img, detectionImageWidth, detectionImageHeight)
 //            Log.d("yama detectObject","num of found :${result.size}")
@@ -465,11 +465,15 @@ class DetectorTest {
             outputStream.close()
         } catch (e: FileNotFoundException) {
             e.printStackTrace()
-            Log.e("yama detectObject", e.toString())
+            Log.e("yama outputBytebuffer", e.toString())
         } catch (e: IOException) {
             e.printStackTrace()
-            Log.e("yama detectObject", e.toString())
+            Log.e("yama outputBytebuffer", e.toString())
         }
+
+        Log.d("yama outputBytebuffer","output")
+
+        img.clear()
 
     }
     private fun copyDetectedObject(dst: DetectedObject, src: DetectedObject, scaleX: Float, scaleY: Float) {

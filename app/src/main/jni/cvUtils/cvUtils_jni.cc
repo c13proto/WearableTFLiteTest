@@ -16,7 +16,7 @@ Mat YuvToGray(jbyte* src,int width,int height);
 Mat bytearrayToMat(const uchar* img,int width,int height,int ch);
 bool ImageOutput(const uchar *img,int height,int width,int ch,char* filename);
 enum YUV{I420=0,NV12=1,NV21=2};
-JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,jint yuv_type,jint src_width,jint src_height,jint src_pitch,jobject dst_bitmap){
+JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,jint yuv_type,jint src_width,jint src_height,jint src_pitch,jobject dst_bitmap,jint dst_width,jint dst_height){
     jboolean isCopy;
     jbyte *img_src = env->GetByteArrayElements(src_yuv, &isCopy);
     Mat yuv=Mat(src_pitch+src_pitch/2, src_width, CV_8UC1,img_src);
@@ -33,6 +33,11 @@ JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,
             break;
     }
     rgba=rgba(Rect(0,0,src_width,src_height));
+    if(dst_width!=src_width||dst_height!=src_height){
+        resize(rgba, rgba, Size(dst_width,dst_height));
+    }
+
+
 
     unsigned char *pDst;
     if(AndroidBitmap_lockPixels(env, dst_bitmap, reinterpret_cast<void **>(&pDst))!=ANDROID_BITMAP_RESULT_SUCCESS)return false;

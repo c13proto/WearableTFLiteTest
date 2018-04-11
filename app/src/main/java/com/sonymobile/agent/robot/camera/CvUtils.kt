@@ -24,6 +24,6 @@ class CvUtils{
 
     external fun yuvCropRotateToRgb(src_yuv: ByteArray, yuv_type: Int, src_width: Int, src_height: Int, src_pitch: Int, crop_area: IntArray, rotate: Int, dst: ByteBuffer, dst_width: Int, dst_height: Int, dst_ch: Int): Boolean
     external fun yuvToRgb(src_yuv: ByteArray, yuv_type: Int, src_width: Int, src_height: Int, src_pitch: Int, dst: ByteBuffer, dst_width: Int, dst_height: Int, dst_ch: Int): Boolean
-    external fun yuvToBitmap(src_yuv: ByteArray,yuv_type:Int,src_wisth:Int,src_height:Int,src_pitch:Int,bitmap: Bitmap):Boolean
+    external fun yuvToBitmap(src_yuv: ByteArray,yuv_type:Int,src_wisth:Int,src_height:Int,src_pitch:Int,bitmap: Bitmap,dst_width:Int=src_wisth,dst_height:Int=src_height):Boolean
     external fun getMotionArea(img1: ByteBuffer, img2: ByteBuffer, width: Int, height: Int, rect: IntArray): Boolean
 }
