@@ -38,7 +38,7 @@ public class ImageClassifierTest{
     }
     private fun convertI420ToBitmap(i420buffer: ByteArray, width: Int, height: Int, pitch: Int,dstWidth:Int=width,dstHeight:Int=height): Bitmap {
         val bitmap = Bitmap.createBitmap(dstWidth, dstHeight, Bitmap.Config.ARGB_8888)
-        CvUtils().yuvToBitmap(i420buffer,CvUtils.YUV_I420,width,height,pitch,bitmap,dstWidth,dstHeight)
+        CvUtils.yuvToBitmap(i420buffer,CvUtils.YUV_I420,width,height,pitch,bitmap,dstWidth,dstHeight)
         return bitmap
     }
     private fun startBackgroundThread() {

@@ -219,7 +219,9 @@ private var didWriteBuffer=false
         canvas.drawBitmap(mFrame,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat(), mPaintRect)
     }
     private fun drawRect(canvas: Canvas){
+
         for(obj:DetectedObject in detectedObjects){
+
             when(obj.name()){
                 "searching"->mPaintRect.color=Color.RED
                 "motion"->mPaintRect.color=Color.BLUE
@@ -251,7 +253,7 @@ private var didWriteBuffer=false
 
     private fun convertI420ToBitmap(i420buffer: ByteArray, width: Int, height: Int, pitch: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        CvUtils().yuvToBitmap(i420buffer,CvUtils.YUV_I420,width,height,pitch,bitmap)
+        CvUtils.yuvToBitmap(i420buffer,CvUtils.YUV_I420,width,height,pitch,bitmap)
         return bitmap
     }
     inner class PlayerThread(var mCustomViewMediaCodec: CustomViewMediaCodec) : Thread() {

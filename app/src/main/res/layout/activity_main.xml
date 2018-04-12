@@ -7,6 +7,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/dark_red"
+    android:id="@+id/rootRelativeLayout"
     tools:context=".MainActivity"
     tools:deviceIds="wear">
     <!--android:padding="@dimen/box_inset_layout_padding"-->
@@ -22,8 +23,8 @@
         android:id="@+id/video_preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
-    <!--<com.example.a86004771.wearabletest.OverlayView-->
-        <!--android:id="@+id/overlay"-->
+    <!--<com.example.a86004771.wearabletest.glclass.GLSurf-->
+        <!--android:id="@+id/gl_overlay"-->
         <!--android:layout_width="match_parent"-->
         <!--android:layout_height="match_parent"/>-->
     <Switch

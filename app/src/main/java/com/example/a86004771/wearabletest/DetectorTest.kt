@@ -156,7 +156,7 @@ class DetectorTest {
         override fun run() {
             motionDetectCtrl()
             cropAreaCtrl(detectionImageHeight == detectionImageWidth)
-            if (!CvUtils().yuvCropRotateToRgb(orgI420Bytearray, CvUtils.YUV_I420, orgImageWidth, orgImageHeight,orgImagePitch ,mCropArea,0, mDetectorBuffer!!, detectionImageWidth, detectionImageHeight, 3)) {
+            if (!CvUtils.yuvCropRotateToRgb(orgI420Bytearray, CvUtils.YUV_I420, orgImageWidth, orgImageHeight,orgImagePitch ,mCropArea,0, mDetectorBuffer!!, detectionImageWidth, detectionImageHeight, 3)) {
                 Log.e(TAG, "Failed to create image nativeImageCrop")
                 return
             }
@@ -188,10 +188,10 @@ class DetectorTest {
         }
 
         private fun detectObject(rgb_img: ByteBuffer): ArrayList<DetectedObject> {
-                        if(outdebug_count<=100){
-                            if(outdebug_count==99)outputBytebuffer(rgb_img,"/sdcard/rgbRaw"+outdebug_count)
-                            outdebug_count++
-                        }
+//                        if(outdebug_count<=100){
+//                            if(outdebug_count==99)outputBytebuffer(rgb_img,"/sdcard/rgbRaw"+outdebug_count)
+//                            outdebug_count++
+//                        }
 //            val t1 = System.currentTimeMillis()
             val result: List<GeneralDetectedObject> = mDetector!!.detect(rgb_img, detectionImageWidth, detectionImageHeight)
 //            Log.d("yama detectObject","num of found :${result.size}")
@@ -237,13 +237,13 @@ class DetectorTest {
 
         private fun motionDetectCtrl() {
             val grayBuffer = ByteBuffer.allocateDirect(motionImageHeight * motionImageWidth)
-            CvUtils().yuvToRgb(orgI420Bytearray, CvUtils.YUV_I420, orgImageWidth, orgImageHeight, orgImagePitch, grayBuffer, motionImageWidth, motionImageHeight, 1)
+            CvUtils.yuvToRgb(orgI420Bytearray, CvUtils.YUV_I420, orgImageWidth, orgImageHeight, orgImagePitch, grayBuffer, motionImageWidth, motionImageHeight, 1)
 
             if (canMotionDetection) {
 //                val t1 = System.currentTimeMillis()
                 val motionArea = intArrayOf(0, 0, 0, 0)
 
-                if (CvUtils().getMotionArea(grayBuffer, mPreGrayBuffer!!, motionImageWidth, motionImageHeight, motionArea)) {
+                if (CvUtils.getMotionArea(grayBuffer, mPreGrayBuffer!!, motionImageWidth, motionImageHeight, motionArea)) {
 //                    Log.d("yama", "motionDetect:" + (System.currentTimeMillis() - t1) + "ms")
                     val scaleX=orgImageWidth.toFloat()/motionImageWidth
                     val scaleY=orgImageHeight.toFloat()/motionImageHeight
@@ -309,7 +309,7 @@ class DetectorTest {
 
             if (square) {
                 var side = if (search_w < search_h) (search_w * scale).toInt() else (search_h * scale).toInt()
-                if(side<detectionImageWidth)side=detectionImageWidth
+//                if(side<detectionImageWidth)side=detectionImageWidth
                 left = (centerX - side / 2.0).toInt()
                 top = (centerY - side / 2.0).toInt()
                 right = (centerX + side / 2.0).toInt()
