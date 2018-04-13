@@ -1,4 +1,4 @@
-package com.example.a86004771.opengl001
+package com.example.a86004771.glclass
 
 import android.content.Context
 import android.opengl.GLSurfaceView

@@ -1,4 +1,4 @@
-package com.example.a86004771.opengl001
+package com.example.a86004771.glclass
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -11,10 +11,17 @@ import javax.microedition.khronos.opengles.GL10
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Rect
+import android.graphics.RectF
 import android.opengl.GLES20
+import android.opengl.GLES20.glBindTexture
+import android.opengl.GLES20.glTexParameteri
 import android.opengl.GLUtils
 import android.opengl.GLSurfaceView.Renderer
 import android.opengl.Matrix
+import android.util.Log
+import com.example.a86004771.wearabletest.CustomViewMediaCodec
+import com.sonymobile.agent.robot.camera.CvUtils
 
 class GLRenderer(// Misc
         internal var mContext: Context) : Renderer {
@@ -27,14 +34,35 @@ class GLRenderer(// Misc
     lateinit var drawListBuffer: ShortBuffer
     lateinit var uvBuffer: FloatBuffer
 
+    private val drawAspectRatio=3f/4//  y/x
+
     // Our screenresolution
     internal var mScreenWidth = 1280f
     internal var mScreenHeight = 768f
     internal var mLastTime: Long = 0
     internal var mProgram: Int = 0
 
+    internal var mTexturename:Int=0
+
     init {
         mLastTime = System.currentTimeMillis() + 100
+        // Initial rect
+        Log.d("yama GLRenderer","init")
+        drawField = RectF()
+        drawField.left = 10f
+        drawField.right = drawField.left+320f
+        drawField.bottom = 20f
+        drawField.top = drawField.bottom+240f
+        CustomViewMediaCodec.onFrameChange = { i420Buffer, width, height, pitch ->
+            Log.d("yama onFrameChange","inGLRender")
+            val frame=CvUtils.convertI420ToBitmap(i420Buffer, width, height, pitch)
+            updateTexture(mTexturename,frame)
+            frame.recycle()
+
+//            UpdateImage(CvUtils.convertI420ToBitmap(i420Buffer, width, height, pitch))
+
+
+        }
     }
 
     fun onPause() {
@@ -142,6 +170,18 @@ class GLRenderer(// Misc
         // Calculate the projection and view transformation
         Matrix.multiplyMM(mtrxProjectionAndView, 0, mtrxProjection, 0, mtrxView, 0)
 
+        adjustDrawField()
+
+    }
+    private fun adjustDrawField(){
+        val theta=Math.atan(drawAspectRatio.toDouble())
+        val width=mScreenWidth*Math.cos(theta)
+        val height=mScreenWidth*Math.sin(theta)
+        drawField.left=(mScreenWidth-width.toFloat())/2
+        drawField.bottom=(mScreenHeight-height.toFloat())/2
+        drawField.top=drawField.bottom+height.toFloat()
+        drawField.right=drawField.left+width.toFloat()
+        TranslateSprite()
     }
 
     override fun onSurfaceCreated(gl: GL10, config: EGLConfig) {
@@ -152,7 +192,7 @@ class GLRenderer(// Misc
         SetupImage()
 
         // Set the clear color to black
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1f)
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0f)
 
         // Create the shaders, solid color
         var vertexShader = riGraphicTools.loadShader(GLES20.GL_VERTEX_SHADER, riGraphicTools.vs_SolidColor)
@@ -177,9 +217,29 @@ class GLRenderer(// Misc
         GLES20.glUseProgram(riGraphicTools.sp_Image)
     }
 
+    fun createTexture(bitmap: Bitmap): Int {
+        val textureHandle = IntArray(1)
+        GLES20.glGenTextures(1, textureHandle, 0)
+        glBindTexture(GLES20.GL_TEXTURE_2D, textureHandle[0])
+        glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST)
+        glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST)
+        updateTexture(textureHandle[0], bitmap)
+        return textureHandle[0]
+    }
+
+    fun updateTexture(textureName: Int, bitmap: Bitmap) {
+        glBindTexture(GLES20.GL_TEXTURE_2D, textureName)
+        // Load the bitmap into the bound texture.
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+    }
+
     fun SetupImage() {
         // Create our UV coordinates.
-        uvs = floatArrayOf(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f)
+        uvs = floatArrayOf(
+                0.0f, 0.0f,
+                0.0f, 1.0f,
+                1.0f, 1.0f,
+                1.0f, 0.0f)
 
         // The texture buffer
         val bb = ByteBuffer.allocateDirect(uvs.size * 4)
@@ -193,39 +253,59 @@ class GLRenderer(// Misc
         GLES20.glGenTextures(1, texturenames, 0)
 
         // Retrieve our image from resources.
-        val id = mContext.resources.getIdentifier("drawable/ic_launcher", null, mContext.packageName)
+        val id = mContext.resources.getIdentifier("drawable/test", null, mContext.packageName)
 
         // Temporary create a bitmap
         val bmp = BitmapFactory.decodeResource(mContext.resources, id)
 
-        // Bind texture to texturename
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texturenames[0])
-
-        // Set filtering
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
-
-        // Load the bitmap into the bound texture.
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bmp, 0)
-
-        // We are done using the bitmap so we should recycle it.
+//        // Bind texture to texturename
+//        GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
+//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texturenames[0])
+//
+//        // Set filtering
+//        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
+//        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+//
+//        // Load the bitmap into the bound texture.
+//        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bmp, 0)
+//
+        mTexturename=createTexture(bmp)
+//        // We are done using the bitmap so we should recycle it.
         bmp.recycle()
 
     }
 
-    fun SetupTriangle() {
-        // We have to create the vertices of our triangle.
-        vertices = floatArrayOf(10.0f, 200f, 0.0f, 10.0f, 100f, 0.0f, 100f, 100f, 0.0f, 100f, 200f, 0.0f)
-
-        indices = shortArrayOf(0, 1, 2, 0, 2, 3) // The order of vertexrendering.
-
+    fun TranslateSprite() {
+        vertices = floatArrayOf(
+                drawField.left,  drawField.top, 0.0f,
+                drawField.left,  drawField.bottom, 0.0f,
+                drawField.right, drawField.bottom, 0.0f,
+                drawField.right, drawField.top, 0.0f)
         // The vertex buffer.
         val bb = ByteBuffer.allocateDirect(vertices.size * 4)
         bb.order(ByteOrder.nativeOrder())
         vertexBuffer = bb.asFloatBuffer()
         vertexBuffer.put(vertices)
         vertexBuffer.position(0)
+    }
+    fun SetupTriangle() {
+
+//        // We have to create the vertices of our triangle.
+//        vertices = floatArrayOf(
+//                10.0f, 200f, 0.0f,
+//                10.0f, 100f, 0.0f,
+//                100f, 100f, 0.0f,
+//                100f, 200f, 0.0f)
+//
+        indices = shortArrayOf(0, 1, 2, 0, 2, 3) // The order of vertexrendering.
+//
+//        // The vertex buffer.
+//        val bb = ByteBuffer.allocateDirect(vertices.size * 4)
+//        bb.order(ByteOrder.nativeOrder())
+//        vertexBuffer = bb.asFloatBuffer()
+//        vertexBuffer.put(vertices)
+//        vertexBuffer.position(0)
+        TranslateSprite()
 
         // initialize byte buffer for the draw list
         val dlb = ByteBuffer.allocateDirect(indices.size * 2)
@@ -243,5 +323,6 @@ class GLRenderer(// Misc
         lateinit var vertices: FloatArray
         lateinit var indices: ShortArray
         lateinit var uvs: FloatArray
+        lateinit var drawField:RectF
     }
 }

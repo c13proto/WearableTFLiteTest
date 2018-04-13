@@ -7,8 +7,8 @@ android {
     buildToolsVersion '27.0.3'
     defaultConfig {
         applicationId "com.example.a86004771.wearabletest"
-        minSdkVersion 26
-        targetSdkVersion 'P'
+        minSdkVersion 25
+        targetSdkVersion 27
         versionCode 1
         versionName "1.0"
 

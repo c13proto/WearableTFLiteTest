@@ -19,6 +19,12 @@ object CvUtils{
         const val YUV_NV12=1
         const val YUV_NV21=2
 
+    fun convertI420ToBitmap(i420buffer: ByteArray, width: Int, height: Int, pitch: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        CvUtils.yuvToBitmap(i420buffer,CvUtils.YUV_I420,width,height,pitch,bitmap)
+        return bitmap
+    }
+
 
     external fun yuvCropRotateToRgb(src_yuv: ByteArray, yuv_type: Int, src_width: Int, src_height: Int, src_pitch: Int, crop_area: IntArray, rotate: Int, dst: ByteBuffer, dst_width: Int, dst_height: Int, dst_ch: Int): Boolean
     external fun yuvToRgb(src_yuv: ByteArray, yuv_type: Int, src_width: Int, src_height: Int, src_pitch: Int, dst: ByteBuffer, dst_width: Int, dst_height: Int, dst_ch: Int): Boolean

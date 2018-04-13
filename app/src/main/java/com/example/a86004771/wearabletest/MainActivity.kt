@@ -9,7 +9,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.RelativeLayout
-import com.example.a86004771.opengl001.GLSurf
+import com.example.a86004771.glclass.GLSurf
 import kotlinx.android.synthetic.main.activity_main.*
 
 
@@ -23,24 +23,18 @@ class MainActivity : WearableActivity()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        setContentView(R.layout.activity_main)
         // Fullscreen mode
         window.setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN)
-
         // We create our Surfaceview for our OpenGL here.
         glSurfaceView = GLSurf(this)
-        setContentView(R.layout.activity_main)
-//         Retrieve our Relative layout from our main layout we just set to our view.
-
         // Attach our surfaceview to our relative layout from our main layout.
         val glParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT)
-
-
         rootRelativeLayout.addView(glSurfaceView,0, glParams)
 
 
         video_preview.setupCustomViewMediaCodec(seekBar_videoPos,video_sw)
-        detectorTest=DetectorTest(this)
+//        detectorTest=DetectorTest(this)
 //        classifierTest=ImageClassifierTest(this)
 
 
