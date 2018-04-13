@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-package com.example.app_phone;
+package com.example.appphone;
 
 import android.app.Activity;
 

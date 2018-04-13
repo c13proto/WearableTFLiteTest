@@ -1,4 +1,4 @@
-package com.example.app_phone
+package com.example.appphone
 
 import android.content.Context
 import android.graphics.*
@@ -11,12 +11,14 @@ import android.view.WindowManager
 import android.widget.CompoundButton
 import android.widget.SeekBar
 import android.widget.Switch
+import com.example.app_phone.R
 import com.sonymobile.agent.robot.camera.CvUtils
-import com.sonymobile.agent.robot.camera.CvUtils.convertI420ToBitmap
+import com.sonymobile.agent.robot.camera.CvUtils.convertYuvToBitmap
 import com.sonymobile.agent.robot.camera.DetectedObject
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
+import java.lang.Float
 import java.util.ArrayList
 
 
@@ -26,7 +28,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
     companion object {//コールバック関係
         var onStop:(() -> Unit)? = null
-        var onFrameChange: ((i420Buffer:ByteArray ,width:Int,height:Int,pitch:Int) -> Unit)?=null
+        var onFrameChange: ((nv12Buffer:ByteArray ,width:Int,height:Int,pitch:Int) -> Unit)?=null
         var onFrameChangeBitmap:((bitmap:Bitmap)->Unit)?=null
 
         val mVideoeSize=Point()
@@ -88,7 +90,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
     }
     private fun setupDetectorCallback(){
-        DetectorTest.onDetectorResultCallback={
+        DetectorTest.onDetectorResultCallback ={
             detectedObjects.clear()
             for(obj: DetectedObject in it){
                 detectedObjects.add(obj)
@@ -96,7 +98,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         }
     }
     private fun setupClassifierCallback(){
-        ImageClassifierTest.onClassifierResultCallback={
+        ImageClassifierTest.onClassifierResultCallback ={
             classifierResult.clear()
             for(row:String in it){
                 classifierResult.add(row)
@@ -123,19 +125,19 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
         val scaleX = mDisplaySize.x.toFloat() / mVideoeSize.x
         val scaleY = mDisplaySize.y.toFloat() / mVideoeSize.y
-        var scale = if (java.lang.Float.compare(scaleX, scaleY) < 1) scaleX else scaleY//画面枠ぴったりになる
+        var scale = if (Float.compare(scaleX, scaleY) < 1) scaleX else scaleY//画面枠ぴったりになる
         //丸型なのでさらに縮める
         val theta = Math.atan(mVideoeSize.y.toDouble() / mVideoeSize.x)
         if (mVideoeSize.x > mVideoeSize.y) scale *= Math.cos(theta).toFloat()
         else scale *= Math.sin(theta).toFloat()
 
-        mDrawScale=scale
+        mDrawScale =scale
         mDrawOffset.x= (((mDisplaySize.x.toFloat() - mVideoeSize.x * scale) / 2)/scale).toInt()//offsetもcaleに合わせる
         mDrawOffset.y= (((mDisplaySize.y.toFloat() - mVideoeSize.y * scale) / 2)/scale).toInt()
-        Log.d("yama calculateDrawScale", "scale=$mDrawScale")
-        Log.d("yama calculateDrawScale","display="+mDisplaySize.x+","+mDisplaySize.y)
-        Log.d("yama calculateDrawScale","video="+mVideoeSize.x+","+mVideoeSize.y)
-        Log.d("yama calculateDrawScale","offset="+mDrawOffset.x+","+mDrawOffset.y)
+        Log.d("yama calculateDrawScale", "scale=${mDrawScale}")
+        Log.d("yama calculateDrawScale","display="+ mDisplaySize.x+","+ mDisplaySize.y)
+        Log.d("yama calculateDrawScale","video="+ mVideoeSize.x+","+ mVideoeSize.y)
+        Log.d("yama calculateDrawScale","offset="+ mDrawOffset.x+","+ mDrawOffset.y)
     }
 
     fun start() {
@@ -168,21 +170,21 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     }
 
 private var didWriteBuffer=false
-    internal fun onFrameCaptrueCtrl(i420buffer: ByteArray, width: Int, height: Int, pitch: Int) {//
+    internal fun onFrameCaptrueCtrl(nv12buffer: ByteArray, width: Int, height: Int, pitch: Int) {//
 //        Log.d("yama","width,height,pitch="+width+","+height+","+pitch)//ログ出すと激重
-        onFrameChange?.invoke(i420buffer, width, height, pitch)//コールバック
+        onFrameChange?.invoke(nv12buffer, width, height, pitch)//コールバック
 
-//        mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
-//        mHandler!!.post({
-//            updateFrame(i420buffer, width, height, pitch)
-//            invalidate()
-//            mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
-//        })
+        mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
+        mHandler!!.post({
+            updateFrame(nv12buffer, width, height, pitch)
+            invalidate()
+            mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
+        })
 
-//        if(!didWriteBuffer){
-//            outputByteArray(i420buffer)
-//            didWriteBuffer=true
-//        }
+        if(!didWriteBuffer){
+            outputByteArray(nv12buffer)
+            didWriteBuffer=true
+        }
 
     }
 
@@ -217,7 +219,7 @@ private var didWriteBuffer=false
     }
     private fun drawFrame(canvas: Canvas){
         canvas.scale(mDrawScale, mDrawScale)
-        canvas.drawBitmap(mFrame,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat(), mPaintRect)
+        canvas.drawBitmap(mFrame, mDrawOffset.x.toFloat(), mDrawOffset.y.toFloat(), mPaintRect)
     }
     private fun drawRect(canvas: Canvas){
 
@@ -236,17 +238,17 @@ private var didWriteBuffer=false
     private fun drawClassifer(canvas: Canvas){
         var offset=0f
         for(row:String in classifierResult){
-            canvas.drawText(row,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat()+20f+offset,mPaintText)
+            canvas.drawText(row, mDrawOffset.x.toFloat(), mDrawOffset.y.toFloat()+20f+offset,mPaintText)
             offset+=textSize
         }
 
     }
 
-    internal fun updateFrame(i420buffer: ByteArray, width: Int, height: Int, pitch: Int) {
+    internal fun updateFrame(nv12buffer: ByteArray, width: Int, height: Int, pitch: Int) {
         synchronized(mlock) {
             mFrame?.recycle()
-            mFrame = convertI420ToBitmap(i420buffer, width, height, pitch)
-//            CvUtils().yuvToBitmap(i420buffer, CvUtils.YUV_I420,width,height,pitch,mFrame!!)
+            mFrame = convertYuvToBitmap(nv12buffer,CvUtils.YUV_NV12, width, height, pitch)
+//            CvUtils().yuvToBitmap(nv12buffer, CvUtils.YUV_NV12,width,height,pitch,mFrame!!)
 //            onFrameChangeBitmap?.invoke(mFrame!!)
         }
 
@@ -320,7 +322,7 @@ private var didWriteBuffer=false
 
             var isEOS = false
             isPlaying = true
-            while (!Thread.interrupted() && isPlaying) {
+            while (!interrupted() && isPlaying) {
                 if (!isEOS) {
                     val inIndex = mDecoder.dequeueInputBuffer(1000)
                     if (inIndex >= 0) {
@@ -376,7 +378,7 @@ private var didWriteBuffer=false
 
                         while (!seeked && mBufferInfo!!.presentationTimeUs / 1000 - lastOffset > System.currentTimeMillis() - startMs) {
                             try {
-                                Thread.sleep(5)
+                                sleep(5)
                             } catch (e: InterruptedException) {
                                 e.printStackTrace()
                                 break

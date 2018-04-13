@@ -55,7 +55,7 @@ class GLRenderer(// Misc
         drawField.top = drawField.bottom+240f
         CustomViewMediaCodec.onFrameChange = { i420Buffer, width, height, pitch ->
             Log.d("yama onFrameChange","inGLRender")
-            val frame=CvUtils.convertI420ToBitmap(i420Buffer, width, height, pitch)
+            val frame=CvUtils.convertYuvToBitmap(i420Buffer,CvUtils.YUV_I420, width, height, pitch)
             updateTexture(mTexturename,frame)
             frame.recycle()
 

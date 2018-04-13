@@ -12,7 +12,7 @@ import android.widget.CompoundButton
 import android.widget.SeekBar
 import android.widget.Switch
 import com.sonymobile.agent.robot.camera.CvUtils
-import com.sonymobile.agent.robot.camera.CvUtils.convertI420ToBitmap
+import com.sonymobile.agent.robot.camera.CvUtils.convertYuvToBitmap
 import com.sonymobile.agent.robot.camera.DetectedObject
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -172,12 +172,12 @@ private var didWriteBuffer=false
 //        Log.d("yama","width,height,pitch="+width+","+height+","+pitch)//ログ出すと激重
         onFrameChange?.invoke(i420buffer, width, height, pitch)//コールバック
 
-//        mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
-//        mHandler!!.post({
-//            updateFrame(i420buffer, width, height, pitch)
-//            invalidate()
-//            mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
-//        })
+        mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
+        mHandler!!.post({
+            updateFrame(i420buffer, width, height, pitch)
+            invalidate()
+            mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
+        })
 
 //        if(!didWriteBuffer){
 //            outputByteArray(i420buffer)
@@ -245,7 +245,7 @@ private var didWriteBuffer=false
     internal fun updateFrame(i420buffer: ByteArray, width: Int, height: Int, pitch: Int) {
         synchronized(mlock) {
             mFrame?.recycle()
-            mFrame = convertI420ToBitmap(i420buffer, width, height, pitch)
+            mFrame =convertYuvToBitmap(i420buffer, CvUtils.YUV_I420, width, height, pitch)
 //            CvUtils().yuvToBitmap(i420buffer, CvUtils.YUV_I420,width,height,pitch,mFrame!!)
 //            onFrameChangeBitmap?.invoke(mFrame!!)
         }

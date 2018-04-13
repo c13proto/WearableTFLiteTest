@@ -35,7 +35,7 @@ class MainActivity : WearableActivity()
 
         video_preview.setupCustomViewMediaCodec(seekBar_videoPos,video_sw)
 //        detectorTest=DetectorTest(this)
-//        classifierTest=ImageClassifierTest(this)
+        classifierTest=ImageClassifierTest(this)
 
 
 //        // Enables Always-on

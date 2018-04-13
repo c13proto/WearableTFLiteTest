@@ -1,4 +1,4 @@
-package com.example.app_phone.glclass
+package com.example.appphone.glclass
 
 import android.content.Context
 import android.opengl.GLSurfaceView

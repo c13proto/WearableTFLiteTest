@@ -1,4 +1,4 @@
-package com.example.app_phone
+package com.example.appphone
 
 import android.content.Context
 import android.graphics.Rect
@@ -156,7 +156,7 @@ class DetectorTest {
         override fun run() {
             motionDetectCtrl()
             cropAreaCtrl(detectionImageHeight == detectionImageWidth)
-            if (!CvUtils.yuvCropRotateToRgb(orgI420Bytearray, CvUtils.YUV_I420, orgImageWidth, orgImageHeight,orgImagePitch ,mCropArea,0, mDetectorBuffer!!, detectionImageWidth, detectionImageHeight, 3)) {
+            if (!CvUtils.yuvCropRotateToRgb(orgI420Bytearray, CvUtils.YUV_NV12, orgImageWidth, orgImageHeight,orgImagePitch ,mCropArea,0, mDetectorBuffer!!, detectionImageWidth, detectionImageHeight, 3)) {
                 Log.e(TAG, "Failed to create image nativeImageCrop")
                 return
             }
@@ -237,7 +237,7 @@ class DetectorTest {
 
         private fun motionDetectCtrl() {
             val grayBuffer = ByteBuffer.allocateDirect(motionImageHeight * motionImageWidth)
-            CvUtils.yuvToRgb(orgI420Bytearray, CvUtils.YUV_I420, orgImageWidth, orgImageHeight, orgImagePitch, grayBuffer, motionImageWidth, motionImageHeight, 1)
+            CvUtils.yuvToRgb(orgI420Bytearray, CvUtils.YUV_NV12, orgImageWidth, orgImageHeight, orgImagePitch, grayBuffer, motionImageWidth, motionImageHeight, 1)
 
             if (canMotionDetection) {
 //                val t1 = System.currentTimeMillis()

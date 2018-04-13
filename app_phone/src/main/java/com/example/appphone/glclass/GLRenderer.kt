@@ -1,4 +1,4 @@
-package com.example.app_phone.glclass
+package com.example.appphone.glclass
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -19,7 +19,7 @@ import android.opengl.GLUtils
 import android.opengl.GLSurfaceView.Renderer
 import android.opengl.Matrix
 import android.util.Log
-import com.example.app_phone.CustomViewMediaCodec
+import com.example.appphone.CustomViewMediaCodec
 import com.sonymobile.agent.robot.camera.CvUtils
 
 class GLRenderer(// Misc
@@ -52,9 +52,9 @@ class GLRenderer(// Misc
         drawField.right = drawField.left+320f
         drawField.bottom = 20f
         drawField.top = drawField.bottom+240f
-        CustomViewMediaCodec.onFrameChange = { i420Buffer, width, height, pitch ->
+        CustomViewMediaCodec.onFrameChange = { nv12Buffer, width, height, pitch ->
             Log.d("yama onFrameChange","inGLRender")
-            val frame=CvUtils.convertI420ToBitmap(i420Buffer, width, height, pitch)
+            val frame=CvUtils.convertYuvToBitmap(nv12Buffer,CvUtils.YUV_NV21, width, height, pitch)
             updateTexture(mTexturename,frame)
             frame.recycle()
 
@@ -178,8 +178,8 @@ class GLRenderer(// Misc
         val height=mScreenWidth*Math.sin(theta)
         drawField.left=(mScreenWidth-width.toFloat())/2
         drawField.bottom=(mScreenHeight-height.toFloat())/2
-        drawField.top=drawField.bottom+height.toFloat()
-        drawField.right=drawField.left+width.toFloat()
+        drawField.top= drawField.bottom+height.toFloat()
+        drawField.right= drawField.left+width.toFloat()
         TranslateSprite()
     }
 

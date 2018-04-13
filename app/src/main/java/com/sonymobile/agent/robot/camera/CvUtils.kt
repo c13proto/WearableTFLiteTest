@@ -19,9 +19,11 @@ object CvUtils{
         const val YUV_NV12=1
         const val YUV_NV21=2
 
-    fun convertI420ToBitmap(i420buffer: ByteArray, width: Int, height: Int, pitch: Int): Bitmap {
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        CvUtils.yuvToBitmap(i420buffer,CvUtils.YUV_I420,width,height,pitch,bitmap)
+    fun convertYuvToBitmap(yuvBuffer: ByteArray,yuv_type: Int, width: Int, height: Int, pitch: Int,
+                           dst_width: Int=width,dst_height: Int=height): Bitmap
+    {
+        val bitmap = Bitmap.createBitmap(dst_width, dst_height, Bitmap.Config.ARGB_8888)
+        CvUtils.yuvToBitmap(yuvBuffer,yuv_type,width,height,pitch,bitmap,dst_width,dst_height)
         return bitmap
     }
 

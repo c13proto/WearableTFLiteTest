@@ -7,7 +7,12 @@
     android:layout_height="match_parent"
     android:background="@color/colorPrimaryDark"
     android:id="@+id/rootRelativeLayout"
-    tools:context=".MainActivity">
+    tools:context="com.example.appphone.MainActivity">
+
+    <!--<com.example.app_phone.CustomViewMediaCodec-->
+        <!--android:id="@+id/video_preview"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"/>-->
 
     <Switch
         android:id="@+id/video_sw"
