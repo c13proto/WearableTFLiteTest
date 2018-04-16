@@ -10,15 +10,13 @@
     android:id="@+id/rootRelativeLayout"
     tools:context=".MainActivity"
     tools:deviceIds="wear">
-    <!--android:padding="@dimen/box_inset_layout_padding"-->
+
+    <android.opengl.GLSurfaceView
+        android:id="@+id/gl_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 
 
-
-
-    <!--<VideoView-->
-    <!--android:id="@+id/videoView"-->
-    <!--android:layout_width="320px"-->
-    <!--android:layout_height="240px" />-->
     <com.example.a86004771.wearabletest.CustomViewMediaCodec
         android:id="@+id/video_preview"
         android:layout_width="match_parent"

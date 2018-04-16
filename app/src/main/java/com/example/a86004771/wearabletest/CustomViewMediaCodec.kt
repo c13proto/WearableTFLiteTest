@@ -3,17 +3,19 @@ package com.example.a86004771.wearabletest
 import android.content.Context
 import android.graphics.*
 import android.media.*
+import android.opengl.GLSurfaceView
 import android.os.Handler
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.CompoundButton
 import android.widget.SeekBar
 import android.widget.Switch
 import com.sonymobile.agent.robot.camera.CvUtils
 import com.sonymobile.agent.robot.camera.CvUtils.convertYuvToBitmap
 import com.sonymobile.agent.robot.camera.DetectedObject
+import jp.co.cyberagent.android.gpuimage.GPUImage
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
@@ -58,8 +60,11 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     private lateinit var mSeekbar: SeekBar
     private lateinit var mSwitch: Switch
     private var preOnDraw=0L
+    private var mEnableOverlayDebug=false//ViewのonDrawで描画させるか
+    private lateinit var mGLSurfaceView: GLSurfaceView
+    private var mGPUImage:GPUImage?=null
 
-    fun setupCustomViewMediaCodec(seekBar: SeekBar,switch: Switch){//extensionではnullになったのでmainActivityから渡している
+    fun setupCustomViewMediaCodec(seekBar: SeekBar,switch: Switch,gl_preview:GLSurfaceView,enableOverlayDebug:Boolean){//extensionではnullになったのでmainActivityから渡している
         Log.d("yama","setupCustomViewMediaCodec")
         mHandler=Handler()
 
@@ -67,14 +72,14 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
         mPaintText.color=Color.GREEN
         mPaintText.textSize=textSize
-
-        val manager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        manager.defaultDisplay.getSize(mDisplaySize)
-
+        mEnableOverlayDebug=enableOverlayDebug
+        mGPUImage = GPUImage(context)
+        mGPUImage!!.setGLSurfaceView(gl_preview)
+        mGLSurfaceView=gl_preview
         mSeekbar=seekBar
         mSwitch=switch
 
-        setupTestVideo()
+        setupLayout()
         setupDetectorCallback()
         setupClassifierCallback()
 
@@ -88,24 +93,31 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
     }
     private fun setupDetectorCallback(){
-        DetectorTest.onDetectorResultCallback={
-            detectedObjects.clear()
-            for(obj: DetectedObject in it){
-                detectedObjects.add(obj)
+        DetectorTest.onDetectorResultCallback ={
+            synchronized(mlock) {
+                detectedObjects.clear()
+                for (obj: DetectedObject in it) {
+                    detectedObjects.add(obj)
+                }
             }
         }
     }
     private fun setupClassifierCallback(){
-        ImageClassifierTest.onClassifierResultCallback={
-            classifierResult.clear()
-            for(row:String in it){
-                classifierResult.add(row)
+        ImageClassifierTest.onClassifierResultCallback ={
+            synchronized(mlock) {
+                classifierResult.clear()
+                for (row: String in it) {
+                    classifierResult.add(row)
+                }
             }
         }
     }
 
 
-    private fun setupTestVideo() {
+    private fun setupLayout() {
+        val manager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        manager.defaultDisplay.getSize(mDisplaySize)
+
         val retriever = MediaMetadataRetriever()
 
         retriever.setDataSource(VideoAFD.fileDescriptor,VideoAFD.startOffset,VideoAFD.length)
@@ -114,7 +126,20 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         mVideoeSize.y = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT))
         retriever.release()
         calculateDrawScale()
+        setGLSurfaceMargin()
         setVideoPath()
+
+
+    }
+    private fun setGLSurfaceMargin(){
+//        val layoutParams=mGLSurfaceView.layoutParams
+        val marginLayoutParams=mGLSurfaceView.layoutParams as ViewGroup.MarginLayoutParams
+        marginLayoutParams.setMargins(
+                (((mDisplaySize.x.toFloat() - mVideoeSize.x * mDrawScale) / 2)/mDrawScale).toInt(),
+                (((mDisplaySize.y.toFloat() - mVideoeSize.y * mDrawScale) / 2)/mDrawScale).toInt(),
+                (((mDisplaySize.x.toFloat() - mVideoeSize.x * mDrawScale) / 2)/mDrawScale).toInt(),
+                (((mDisplaySize.y.toFloat() - mVideoeSize.y * mDrawScale) / 2)/mDrawScale).toInt()
+                )
 
 
     }
@@ -123,13 +148,14 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
         val scaleX = mDisplaySize.x.toFloat() / mVideoeSize.x
         val scaleY = mDisplaySize.y.toFloat() / mVideoeSize.y
-        var scale = if (java.lang.Float.compare(scaleX, scaleY) < 1) scaleX else scaleY//画面枠ぴったりになる
+        var  scale =    if (scaleX<scaleY) scaleX
+                        else scaleY//画面枠ぴったりになる
         //丸型なのでさらに縮める
         val theta = Math.atan(mVideoeSize.y.toDouble() / mVideoeSize.x)
         if (mVideoeSize.x > mVideoeSize.y) scale *= Math.cos(theta).toFloat()
         else scale *= Math.sin(theta).toFloat()
 
-        mDrawScale=scale
+        mDrawScale =scale
         mDrawOffset.x= (((mDisplaySize.x.toFloat() - mVideoeSize.x * scale) / 2)/scale).toInt()//offsetもcaleに合わせる
         mDrawOffset.y= (((mDisplaySize.y.toFloat() - mVideoeSize.y * scale) / 2)/scale).toInt()
         Log.d("yama calculateDrawScale", "scale=$mDrawScale")
@@ -172,12 +198,17 @@ private var didWriteBuffer=false
 //        Log.d("yama","width,height,pitch="+width+","+height+","+pitch)//ログ出すと激重
         onFrameChange?.invoke(i420buffer, width, height, pitch)//コールバック
 
-        mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
-        mHandler!!.post({
-            updateFrame(i420buffer, width, height, pitch)
-            invalidate()
-            mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
-        })
+
+        if(mEnableOverlayDebug)
+        {
+            mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
+            mHandler!!.post({
+//                updateFrame(nv12buffer, width, height, pitch)
+                mGPUImage!!.setImage(convertYuvToBitmap(i420buffer,CvUtils.YUV_I420, width, height, pitch))
+                invalidate()
+                mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
+            })
+        }
 
 //        if(!didWriteBuffer){
 //            outputByteArray(i420buffer)
@@ -207,37 +238,43 @@ private var didWriteBuffer=false
 //        Log.d("yama","onDrawFPS=${1000f/(System.currentTimeMillis()-preOnDraw)}")
 //        val FPS=1000f/(System.currentTimeMillis()-preOnDraw)
 //        preOnDraw=System.currentTimeMillis()
-        if (mFrame != null) {
-            drawFrame(canvas)
-            //            canvas.drawText(FPS.toString(),mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat()+20f,mPaint)
-            drawRect(canvas)
-            drawClassifer(canvas)
-        }
+        canvas.scale(mDrawScale, mDrawScale)
+        if (mFrame != null)drawFrame(canvas)
+        drawRect(canvas)
+        drawClassifer(canvas)
 
     }
     private fun drawFrame(canvas: Canvas){
-        canvas.scale(mDrawScale, mDrawScale)
-        canvas.drawBitmap(mFrame,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat(), mPaintRect)
+
+        canvas.drawBitmap(mFrame, mDrawOffset.x.toFloat(), mDrawOffset.y.toFloat(), mPaintRect)
     }
     private fun drawRect(canvas: Canvas){
 
-        for(obj:DetectedObject in detectedObjects){
+        synchronized(mlock) {
+            for (obj: DetectedObject in detectedObjects) {
 
-            when(obj.name()){
-                "searching"->mPaintRect.color=Color.RED
-                "motion"->mPaintRect.color=Color.BLUE
-                else->mPaintRect.color=Color.YELLOW
+                when (obj.name()) {
+                    "searching" -> mPaintRect.color = Color.RED
+                    "motion" -> mPaintRect.color = Color.BLUE
+                    else -> mPaintRect.color = Color.YELLOW
+                }
+                val drawRect = Rect((obj.xPosition() ).toInt(),
+                        (obj.yPosition() ).toInt(),
+                        ((obj.xPosition() + obj.width()) ).toInt(),
+                        ((obj.yPosition() + obj.height())).toInt()
+                )
+                drawRect.offset(mDrawOffset.x, mDrawOffset.y)
+                canvas.drawRect(drawRect, mPaintRect)
             }
-            val drawRect=Rect(obj.xPosition(),obj.yPosition(),obj.xPosition()+obj.width(),obj.yPosition()+obj.height())
-            drawRect.offset(mDrawOffset.x, mDrawOffset.y)
-            canvas.drawRect(drawRect,mPaintRect)
         }
     }
     private fun drawClassifer(canvas: Canvas){
         var offset=0f
-        for(row:String in classifierResult){
-            canvas.drawText(row,mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat()+20f+offset,mPaintText)
-            offset+=textSize
+        synchronized(mlock) {
+            for (row: String in classifierResult) {
+                canvas.drawText(row, mDrawOffset.x.toFloat(), mDrawOffset.y.toFloat() + 20f + offset, mPaintText)
+                offset += textSize
+            }
         }
 
     }
@@ -320,7 +357,7 @@ private var didWriteBuffer=false
 
             var isEOS = false
             isPlaying = true
-            while (!Thread.interrupted() && isPlaying) {
+            while (!interrupted() && isPlaying) {
                 if (!isEOS) {
                     val inIndex = mDecoder.dequeueInputBuffer(1000)
                     if (inIndex >= 0) {
@@ -376,7 +413,7 @@ private var didWriteBuffer=false
 
                         while (!seeked && mBufferInfo!!.presentationTimeUs / 1000 - lastOffset > System.currentTimeMillis() - startMs) {
                             try {
-                                Thread.sleep(5)
+                                sleep(5)
                             } catch (e: InterruptedException) {
                                 e.printStackTrace()
                                 break

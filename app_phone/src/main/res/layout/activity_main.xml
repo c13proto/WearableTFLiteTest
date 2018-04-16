@@ -9,14 +9,16 @@
     android:id="@+id/rootRelativeLayout"
     tools:context="com.example.appphone.MainActivity">
 
+    <android.opengl.GLSurfaceView
+        android:id="@+id/gl_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
     <!--<com.example.app_phone.CustomViewMediaCodec-->
         <!--android:id="@+id/video_preview"-->
         <!--android:layout_width="match_parent"-->
         <!--android:layout_height="match_parent"/>-->
-    <android.opengl.GLSurfaceView
-    android:id="@+id/gl_preview"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"/>
+
 
     <Switch
         android:id="@+id/video_sw"

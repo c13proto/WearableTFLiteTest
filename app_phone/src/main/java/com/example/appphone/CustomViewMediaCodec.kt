@@ -8,6 +8,7 @@ import android.os.Handler
 import android.util.AttributeSet
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.CompoundButton
 import android.widget.SeekBar
@@ -59,15 +60,15 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     private var lastSeekPosition = 0L
 
 
-
+//UI周り
     private lateinit var mSeekbar: SeekBar
     private lateinit var mSwitch: Switch
     private var preOnDraw=0L
-    private var mEnablePreview=false
-
+    private var mEnableOverlayDebug=false//ViewのonDrawで描画させるか
+    private lateinit var mGLSurfaceView: GLSurfaceView
     private var mGPUImage:GPUImage?=null
 
-    fun setupCustomViewMediaCodec(seekBar: SeekBar,switch: Switch,enablePreview:Boolean,gl_preview:GLSurfaceView){//extensionではnullになったのでmainActivityから渡している
+    fun setupCustomViewMediaCodec(seekBar: SeekBar,switch: Switch,gl_preview:GLSurfaceView,enableOverlayDebug:Boolean){//extensionではnullになったのでmainActivityから渡している
         Log.d("yama","setupCustomViewMediaCodec")
         mHandler=Handler()
 
@@ -75,17 +76,14 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
         mPaintText.color=Color.GREEN
         mPaintText.textSize=textSize
-        mEnablePreview=enablePreview
+        mEnableOverlayDebug=enableOverlayDebug
         mGPUImage = GPUImage(context)
         mGPUImage!!.setGLSurfaceView(gl_preview)
-
-        val manager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        manager.defaultDisplay.getSize(mDisplaySize)
-
+        mGLSurfaceView=gl_preview
         mSeekbar=seekBar
         mSwitch=switch
 
-        setupTestVideo()
+        setupLayout()
         setupDetectorCallback()
         setupClassifierCallback()
 
@@ -100,32 +98,51 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     }
     private fun setupDetectorCallback(){
         DetectorTest.onDetectorResultCallback ={
-            detectedObjects.clear()
-            for(obj: DetectedObject in it){
-                detectedObjects.add(obj)
+            synchronized(mlock) {
+                detectedObjects.clear()
+                for (obj: DetectedObject in it) {
+                    detectedObjects.add(obj)
+                }
             }
         }
     }
     private fun setupClassifierCallback(){
         ImageClassifierTest.onClassifierResultCallback ={
-            classifierResult.clear()
-            for(row:String in it){
-                classifierResult.add(row)
+            synchronized(mlock) {
+                classifierResult.clear()
+                for (row: String in it) {
+                    classifierResult.add(row)
+                }
             }
         }
     }
 
 
-    private fun setupTestVideo() {
-        val retriever = MediaMetadataRetriever()
+    private fun setupLayout() {
+        val manager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        manager.defaultDisplay.getSize(mDisplaySize)
 
+        val retriever = MediaMetadataRetriever()
         retriever.setDataSource(VideoAFD.fileDescriptor,VideoAFD.startOffset,VideoAFD.length)
 //        retriever.setDataSource(context,Uri.parse(videoPath))
         mVideoeSize.x = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH))
         mVideoeSize.y = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT))
         retriever.release()
         calculateDrawScale()
+        setGLSurfaceMargin()
         setVideoPath()
+
+
+    }
+    private fun setGLSurfaceMargin(){
+//        val layoutParams=mGLSurfaceView.layoutParams
+        val marginLayoutParams=mGLSurfaceView.layoutParams as ViewGroup.MarginLayoutParams
+        marginLayoutParams.setMargins(
+                (((mDisplaySize.x.toFloat() - mVideoeSize.x * mDrawScale) / 2)/mDrawScale).toInt(),
+                (((mDisplaySize.y.toFloat() - mVideoeSize.y * mDrawScale) / 2)/mDrawScale).toInt(),
+                (((mDisplaySize.x.toFloat() - mVideoeSize.x * mDrawScale) / 2)/mDrawScale).toInt(),
+                (((mDisplaySize.y.toFloat() - mVideoeSize.y * mDrawScale) / 2 +(mDisplaySize.y-mDisplaySize.x))/mDrawScale).toInt()
+                )
 
 
     }
@@ -134,7 +151,8 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
         val scaleX = mDisplaySize.x.toFloat() / mVideoeSize.x
         val scaleY = mDisplaySize.y.toFloat() / mVideoeSize.y
-        var scale = if (Float.compare(scaleX, scaleY) < 1) scaleX else scaleY//画面枠ぴったりになる
+        var  scale =    if (scaleX<scaleY) scaleX
+                        else scaleY//画面枠ぴったりになる
         //丸型なのでさらに縮める
         val theta = Math.atan(mVideoeSize.y.toDouble() / mVideoeSize.x)
         if (mVideoeSize.x > mVideoeSize.y) scale *= Math.cos(theta).toFloat()
@@ -184,16 +202,16 @@ private var didWriteBuffer=false
         onFrameChange?.invoke(nv12buffer, width, height, pitch)//コールバック
 
 
-//        if(mEnablePreview)
-//        {
+        if(mEnableOverlayDebug)
+        {
             mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
             mHandler!!.post({
 //                updateFrame(nv12buffer, width, height, pitch)
                 mGPUImage!!.setImage(convertYuvToBitmap(nv12buffer,CvUtils.YUV_NV12, width, height, pitch))
-//                invalidate()
+                invalidate()
                 mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
             })
-//        }
+        }
 
 //        if(!didWriteBuffer){
 //            outputByteArray(nv12buffer)
@@ -223,37 +241,43 @@ private var didWriteBuffer=false
 //        Log.d("yama","onDrawFPS=${1000f/(System.currentTimeMillis()-preOnDraw)}")
 //        val FPS=1000f/(System.currentTimeMillis()-preOnDraw)
 //        preOnDraw=System.currentTimeMillis()
-        if (mFrame != null) {
-            drawFrame(canvas)
-            //            canvas.drawText(FPS.toString(),mDrawOffset.x.toFloat(),mDrawOffset.y.toFloat()+20f,mPaint)
-            drawRect(canvas)
-            drawClassifer(canvas)
-        }
+        canvas.scale(mDrawScale, mDrawScale)
+        if (mFrame != null)drawFrame(canvas)
+        drawRect(canvas)
+        drawClassifer(canvas)
 
     }
     private fun drawFrame(canvas: Canvas){
-        canvas.scale(mDrawScale, mDrawScale)
+
         canvas.drawBitmap(mFrame, mDrawOffset.x.toFloat(), mDrawOffset.y.toFloat(), mPaintRect)
     }
     private fun drawRect(canvas: Canvas){
 
-        for(obj:DetectedObject in detectedObjects){
+        synchronized(mlock) {
+            for (obj: DetectedObject in detectedObjects) {
 
-            when(obj.name()){
-                "searching"->mPaintRect.color=Color.RED
-                "motion"->mPaintRect.color=Color.BLUE
-                else->mPaintRect.color=Color.YELLOW
+                when (obj.name()) {
+                    "searching" -> mPaintRect.color = Color.RED
+                    "motion" -> mPaintRect.color = Color.BLUE
+                    else -> mPaintRect.color = Color.YELLOW
+                }
+                val drawRect = Rect((obj.xPosition() ).toInt(),
+                        (obj.yPosition() ).toInt(),
+                        ((obj.xPosition() + obj.width()) ).toInt(),
+                        ((obj.yPosition() + obj.height())).toInt()
+                )
+                drawRect.offset(mDrawOffset.x, mDrawOffset.y)
+                canvas.drawRect(drawRect, mPaintRect)
             }
-            val drawRect=Rect(obj.xPosition(),obj.yPosition(),obj.xPosition()+obj.width(),obj.yPosition()+obj.height())
-            drawRect.offset(mDrawOffset.x, mDrawOffset.y)
-            canvas.drawRect(drawRect,mPaintRect)
         }
     }
     private fun drawClassifer(canvas: Canvas){
         var offset=0f
-        for(row:String in classifierResult){
-            canvas.drawText(row, mDrawOffset.x.toFloat(), mDrawOffset.y.toFloat()+20f+offset,mPaintText)
-            offset+=textSize
+        synchronized(mlock) {
+            for (row: String in classifierResult) {
+                canvas.drawText(row, mDrawOffset.x.toFloat(), mDrawOffset.y.toFloat() + 20f + offset, mPaintText)
+                offset += textSize
+            }
         }
 
     }
