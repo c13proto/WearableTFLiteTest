@@ -9,6 +9,7 @@ import android.view.WindowManager
 import android.widget.RelativeLayout
 import com.example.app_phone.R
 import com.example.appphone.glclass.GLSurf
+import jp.co.cyberagent.android.gpuimage.GPUImage
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : Activity() {
@@ -18,6 +19,7 @@ class MainActivity : Activity() {
     // Our OpenGL Surfaceview
     private var glSurfaceView: GLSurfaceView? = null
     private var video_preview:CustomViewMediaCodec?=null
+    private var gpuImage:GPUImage?=null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,7 +32,7 @@ class MainActivity : Activity() {
 
         video_preview=CustomViewMediaCodec(this)
         rootRelativeLayout.addView(video_preview,0, layoutParams)
-        video_preview!!.setupCustomViewMediaCodec(seekBar_videoPos,video_sw)
+        video_preview!!.setupCustomViewMediaCodec(seekBar_videoPos,video_sw,false,gl_preview)
 
         // We create our Surfaceview for our OpenGL here.
 //        glSurfaceView = GLSurf(this)
@@ -38,8 +40,10 @@ class MainActivity : Activity() {
 
 
 
-        detectorTest=DetectorTest(this)
-        classifierTest=ImageClassifierTest(this)
+
+
+//        detectorTest=DetectorTest(this)
+//        classifierTest=ImageClassifierTest(this)
 
 
     }

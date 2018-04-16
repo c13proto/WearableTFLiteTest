@@ -1,1 +1,1 @@
-include ':app', ':app_phone'
+include ':app', ':app_phone',':gpuimageVideoRecordLibrary'

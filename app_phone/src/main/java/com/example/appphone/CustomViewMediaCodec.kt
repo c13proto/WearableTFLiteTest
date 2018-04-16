@@ -3,6 +3,7 @@ package com.example.appphone
 import android.content.Context
 import android.graphics.*
 import android.media.*
+import android.opengl.GLSurfaceView
 import android.os.Handler
 import android.util.AttributeSet
 import android.util.Log
@@ -15,6 +16,8 @@ import com.example.app_phone.R
 import com.sonymobile.agent.robot.camera.CvUtils
 import com.sonymobile.agent.robot.camera.CvUtils.convertYuvToBitmap
 import com.sonymobile.agent.robot.camera.DetectedObject
+import jp.co.cyberagent.android.gpuimage.GPUImage
+import kotlinx.android.synthetic.main.activity_main.*
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
@@ -60,8 +63,11 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     private lateinit var mSeekbar: SeekBar
     private lateinit var mSwitch: Switch
     private var preOnDraw=0L
+    private var mEnablePreview=false
 
-    fun setupCustomViewMediaCodec(seekBar: SeekBar,switch: Switch){//extensionではnullになったのでmainActivityから渡している
+    private var mGPUImage:GPUImage?=null
+
+    fun setupCustomViewMediaCodec(seekBar: SeekBar,switch: Switch,enablePreview:Boolean,gl_preview:GLSurfaceView){//extensionではnullになったのでmainActivityから渡している
         Log.d("yama","setupCustomViewMediaCodec")
         mHandler=Handler()
 
@@ -69,6 +75,9 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
         mPaintText.color=Color.GREEN
         mPaintText.textSize=textSize
+        mEnablePreview=enablePreview
+        mGPUImage = GPUImage(context)
+        mGPUImage!!.setGLSurfaceView(gl_preview)
 
         val manager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         manager.defaultDisplay.getSize(mDisplaySize)
@@ -174,17 +183,22 @@ private var didWriteBuffer=false
 //        Log.d("yama","width,height,pitch="+width+","+height+","+pitch)//ログ出すと激重
         onFrameChange?.invoke(nv12buffer, width, height, pitch)//コールバック
 
-        mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
-        mHandler!!.post({
-            updateFrame(nv12buffer, width, height, pitch)
-            invalidate()
-            mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
-        })
 
-        if(!didWriteBuffer){
-            outputByteArray(nv12buffer)
-            didWriteBuffer=true
-        }
+//        if(mEnablePreview)
+//        {
+            mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
+            mHandler!!.post({
+//                updateFrame(nv12buffer, width, height, pitch)
+                mGPUImage!!.setImage(convertYuvToBitmap(nv12buffer,CvUtils.YUV_NV12, width, height, pitch))
+//                invalidate()
+                mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
+            })
+//        }
+
+//        if(!didWriteBuffer){
+//            outputByteArray(nv12buffer)
+//            didWriteBuffer=true
+//        }
 
     }
 

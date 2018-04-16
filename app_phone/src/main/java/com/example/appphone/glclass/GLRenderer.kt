@@ -54,8 +54,9 @@ class GLRenderer(// Misc
         drawField.top = drawField.bottom+240f
         CustomViewMediaCodec.onFrameChange = { nv12Buffer, width, height, pitch ->
             Log.d("yama onFrameChange","inGLRender")
-            val frame=CvUtils.convertYuvToBitmap(nv12Buffer,CvUtils.YUV_NV21, width, height, pitch)
+            val frame=CvUtils.convertYuvToBitmap(nv12Buffer,CvUtils.YUV_NV12, width, height, pitch)
             updateTexture(mTexturename,frame)
+
             frame.recycle()
 
 //            UpdateImage(CvUtils.convertI420ToBitmap(i420Buffer, width, height, pitch))
@@ -91,6 +92,7 @@ class GLRenderer(// Misc
 
         // Save the current time to see how long it took :).
         mLastTime = now
+//        Log.d("yama onDrawFrame","onDrawFrame")
 
     }
 
@@ -230,6 +232,7 @@ class GLRenderer(// Misc
         glBindTexture(GLES20.GL_TEXTURE_2D, textureName)
         // Load the bitmap into the bound texture.
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0)
+
     }
 
     fun SetupImage() {

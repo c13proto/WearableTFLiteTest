@@ -1,0 +1,25 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml:2:1-66
+INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml:2:1-66
+INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml:2:1-66
+	package
+		ADDED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml:2:11-54
+		INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+		INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+	xmlns:android
+		ADDED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml:2:1-66
+uses-sdk
+INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+		ADDED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+		INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+		ADDED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml
+		INJECTED from C:\Users\86004771\Desktop\wearableApp\WearableTest\gpuimageVideoRecordLibrary\AndroidManifest.xml

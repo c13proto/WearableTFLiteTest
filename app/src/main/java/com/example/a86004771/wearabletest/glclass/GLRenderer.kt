@@ -57,6 +57,7 @@ class GLRenderer(// Misc
             Log.d("yama onFrameChange","inGLRender")
             val frame=CvUtils.convertYuvToBitmap(i420Buffer,CvUtils.YUV_I420, width, height, pitch)
             updateTexture(mTexturename,frame)
+
             frame.recycle()
 
 //            UpdateImage(CvUtils.convertI420ToBitmap(i420Buffer, width, height, pitch))

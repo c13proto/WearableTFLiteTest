@@ -23,7 +23,7 @@ object CvUtils{
                            dst_width: Int=width,dst_height: Int=height): Bitmap
     {
         val bitmap = Bitmap.createBitmap(dst_width, dst_height, Bitmap.Config.ARGB_8888)
-        CvUtils.yuvToBitmap(yuvBuffer,yuv_type,width,height,pitch,bitmap,dst_width,dst_height)
+        yuvToBitmap(yuvBuffer,yuv_type,width,height,pitch,bitmap,dst_width,dst_height)
         return bitmap
     }
 

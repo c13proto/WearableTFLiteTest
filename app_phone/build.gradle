@@ -12,6 +12,9 @@ android {
         versionName "1.0"
 
 //        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters "armeabi-v7a"//,"armeabi","arm64-v8a"//実行環境によって限定しないと読みに言ってくれない場合がある
+        }
 
     }
     buildTypes {
@@ -34,4 +37,5 @@ dependencies {
     //    testImplementation 'junit:junit:4.12'
     //    androidTestImplementation 'com.android.support.test:runner:1.0.1'
     //    androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
+    implementation project(':gpuimageVideoRecordLibrary')
 }
