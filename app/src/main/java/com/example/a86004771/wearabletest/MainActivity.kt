@@ -34,6 +34,8 @@ class MainActivity : WearableActivity()
 
         if(event?.repeatCount==0){
             Log.d("yama onKeyDown","keyCode="+event.keyCode)//265
+            Log.d("yama","finish()")
+            this.finish()
         }
 
 

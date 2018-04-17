@@ -10,11 +10,10 @@ import com.sonymobile.agent.robot.camera.CvUtils.convertYuvToBitmap
 
 class ImageClassifierTest{
 
-    lateinit var activity: Activity
-    lateinit var classifier: ImageClassifier
+    var classifier: ImageClassifier
     private val HANDLE_THREAD_NAME = "CameraBackground"
 
-    private val lock = Any()
+//    private val lock = Any()
     private lateinit var backgroundThread: HandlerThread
     private lateinit var backgroundHandler: Handler
 
@@ -24,16 +23,13 @@ class ImageClassifierTest{
 
     constructor(activity: Activity)
     {
-        this.activity=activity
         classifier= ImageClassifierQuantizedMobileNet(activity)
         startBackgroundThread()
         CustomViewMediaCodec.onFrameChange = { nv12Buffer, width, height, pitch ->
-
-
-            synchronized(lock){
+//            synchronized(lock){
                 backgroundHandler.removeCallbacksAndMessages(null)
                 backgroundHandler.post(periodicClassify(nv12Buffer,width,height,pitch))
-            }
+//            }
 
         }
     }
@@ -45,18 +41,18 @@ class ImageClassifierTest{
     }
 
     inner class periodicClassify(yuvBuffer: ByteArray,width:Int,height:Int,pitch:Int) : Runnable {
-        val orgNV21Bytearray:ByteArray = yuvBuffer
-        val orgImageWidth=width
-        val orgImageHeight=height
-        val orgImagePitch=pitch
+        private val orgNV21Bytearray:ByteArray = yuvBuffer
+        private val orgImageWidth=width
+        private val orgImageHeight=height
+        private val orgImagePitch=pitch
         override fun run() {
             classifyFrame(orgNV21Bytearray,orgImageWidth,orgImageHeight,orgImagePitch)
         }
         private fun classifyFrame(yuvBuffer: ByteArray,width:Int,height:Int,pitch:Int) {
 
             val frameBitmap = convertYuvToBitmap(yuvBuffer,CvUtils.YUV_NV12, width, height, pitch, classifier.imageSizeX, classifier.imageSizeY)
-            val classifereResult = classifier.classifyFrame(frameBitmap)//textShowに内容が書かれているはず
-            frameBitmap.recycle()//classfire.x classfire.yのサイズにする必要あり
+            val classifereResult = classifier.classifyFrame(frameBitmap)
+            frameBitmap.recycle()
             Log.d("yama classifyFrame",classifereResult)
             onClassifierResultCallback?.invoke(classifereResult.split("\n"))
         }

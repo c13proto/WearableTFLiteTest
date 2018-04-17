@@ -33,7 +33,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     companion object {//コールバック関係
         var onStop:(() -> Unit)? = null
         var onFrameChange: ((nv12Buffer:ByteArray ,width:Int,height:Int,pitch:Int) -> Unit)?=null
-        var onFrameChangeBitmap:((bitmap:Bitmap)->Unit)?=null
+//        var onFrameChangeBitmap:((bitmap:Bitmap)->Unit)?=null
 
         val mVideoeSize=Point()
         val mDisplaySize=Point()
@@ -53,8 +53,8 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     private val mPaintRect=Paint()
     private val mPaintText=Paint()
     private val textSize=25f
-    val detectedObjects = ArrayList<DetectedObject>()
-    val classifierResult=ArrayList<String>()
+    private val detectedObjects = ArrayList<DetectedObject>()
+    private val classifierResult=ArrayList<String>()
 
     private val mlock = Any()
     private var lastSeekPosition = 0L
@@ -286,8 +286,6 @@ private var didWriteBuffer=false
         synchronized(mlock) {
             mFrame?.recycle()
             mFrame = convertYuvToBitmap(nv12buffer,CvUtils.YUV_NV12, width, height, pitch)
-//            CvUtils().yuvToBitmap(nv12buffer, CvUtils.YUV_NV12,width,height,pitch,mFrame!!)
-//            onFrameChangeBitmap?.invoke(mFrame!!)
         }
 
     }
