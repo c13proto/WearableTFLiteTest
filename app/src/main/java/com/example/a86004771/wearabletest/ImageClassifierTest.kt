@@ -11,8 +11,8 @@ import com.sonymobile.agent.robot.camera.CvUtils.convertYuvToBitmap
 
 public class ImageClassifierTest{
 
-    lateinit var activity: Activity
-    lateinit var classifier: ImageClassifier
+    var activity: Activity
+    var classifier: ImageClassifier
     private val HANDLE_THREAD_NAME = "CameraBackground"
 
     private val lock = Any()
