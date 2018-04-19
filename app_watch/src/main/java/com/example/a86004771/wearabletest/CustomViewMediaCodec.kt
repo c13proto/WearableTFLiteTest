@@ -28,7 +28,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 
     companion object {//コールバック関係
         var onStop:(() -> Unit)? = null
-        var onFrameChange: ((i420Buffer:ByteArray ,width:Int,height:Int,pitch:Int) -> Unit)?=null
+        var onFrameChange: ((yuvBuffer:ByteArray,yuvType:Int,width:Int,height:Int,pitch:Int) -> Unit)?=null
 //        var onFrameChangeBitmap:((bitmap:Bitmap)->Unit)?=null
         val mVideoeSize=Point()
         val mDisplaySize=Point()
@@ -193,31 +193,33 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     }
 
 private var didWriteBuffer=false
-    internal fun onFrameCaptrueCtrl(i420buffer: ByteArray, width: Int, height: Int, pitch: Int) {//
-//        Log.d("yama","width,height,pitch="+width+","+height+","+pitch)//ログ出すと激重
-        onFrameChange?.invoke(i420buffer, width, height, pitch)//コールバック
+    private var preFrameCaptrueTime=0L
+    internal fun onFrameCaptrueCtrl(yuvBuffer: ByteArray,yuv_type:Int ,width: Int, height: Int, pitch: Int) {//
+//        val currentTime=System.currentTimeMillis()
+//        Log.d("yama onFrameCaptrueCtrl","FPS=${1000f/(currentTime-preFrameCaptrueTime)}")
+//        preFrameCaptrueTime=currentTime
+        onFrameChange?.invoke(yuvBuffer, yuv_type,width, height, pitch)//コールバック
 
 
         if(mEnableOverlayDebug)
         {
             mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
             mHandler!!.post({
-//                updateFrame(nv12buffer, width, height, pitch)
-                mGPUImage!!.setImage(convertYuvToBitmap(i420buffer,CvUtils.YUV_I420, width, height, pitch))
+//                updateFrame(yuvBuffer, width, height, pitch)
+                mGPUImage!!.setImage(convertYuvToBitmap(yuvBuffer,yuv_type, width, height, pitch))
                 invalidate()
                 mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
             })
         }
 
 //        if(!didWriteBuffer){
-//            outputByteArray(i420buffer)
+//            outputByteArray(yuvBuffer)
 //            didWriteBuffer=true
 //        }
 
     }
 
     private fun outputByteArray(img: ByteArray) {
-
         try {
             val outputStream = FileOutputStream("/sdcard/Raw")
             outputStream.write(img)
@@ -257,10 +259,10 @@ private var didWriteBuffer=false
                     "motion" -> mPaintRect.color = Color.BLUE
                     else -> mPaintRect.color = Color.YELLOW
                 }
-                val drawRect = Rect((obj.xPosition() ).toInt(),
-                        (obj.yPosition() ).toInt(),
-                        ((obj.xPosition() + obj.width()) ).toInt(),
-                        ((obj.yPosition() + obj.height())).toInt()
+                val drawRect = Rect(obj.xPosition() ,
+                        obj.yPosition(),
+                        obj.xPosition() + obj.width(),
+                        obj.yPosition() + obj.height()
                 )
                 drawRect.offset(mDrawOffset.x, mDrawOffset.y)
                 canvas.drawRect(drawRect, mPaintRect)
@@ -297,6 +299,10 @@ private var didWriteBuffer=false
         private val audioTrack: AudioTrack? = null
         private var videoWidth: Int = 0
         private var videoHeight: Int = 0
+        private var videoStride:Int=0
+        private var videoPitch:Int=0
+        private var videoYuvType=0
+
 
         private var lastPresentationTimeUs: Long = 0
         private var seeked = false
@@ -338,8 +344,7 @@ private var didWriteBuffer=false
                     mExtractor.selectTrack(i)
                     mDecoder = MediaCodec.createDecoderByType(mime)
                     mDecoder.configure(format, null, null, 0)
-                    videoWidth = format.getInteger(MediaFormat.KEY_WIDTH)
-                    videoHeight = format.getInteger(MediaFormat.KEY_HEIGHT)
+
                     break
                 }
             }
@@ -387,14 +392,17 @@ private var didWriteBuffer=false
 
                 when (outIndex) {
                     MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED -> Log.d("DecodeActivity", "INFO_OUTPUT_BUFFERS_CHANGED")
-                    MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> Log.d("DecodeActivity", "New format " + mDecoder.outputFormat)
+                    MediaCodec.INFO_OUTPUT_FORMAT_CHANGED ->{
+                        Log.d("DecodeActivity", "New format " + mDecoder.outputFormat)
+                        getVideoInfo()
+                    }
                     MediaCodec.INFO_TRY_AGAIN_LATER -> Log.d("DecodeActivity", "dequeueOutputBuffer timed out!")
                     else -> {
                         val buffer = mDecoder.getOutputBuffer(outIndex)
                         val byteArray = ByteArray(buffer!!.remaining())
                         buffer.get(byteArray)
                         if (byteArray.size >= videoHeight.toDouble() * videoWidth.toDouble() * 1.5) {//nv12のサイズになっているとき(ずれてるときもある)
-                            mCustomViewMediaCodec.onFrameCaptrueCtrl(byteArray, videoWidth, videoHeight, videoHeight + videoHeight.and(15))//高さを16の倍数にする
+                            mCustomViewMediaCodec.onFrameCaptrueCtrl(byteArray,videoYuvType, videoWidth, videoHeight, videoPitch)//高さを16の倍数にする
                         }
                         //Log.v("DecodeActivity", "We can't use this buffer but render it due to the API limit, " + buffer);
 
@@ -435,6 +443,17 @@ private var didWriteBuffer=false
             //            mExtractor.release();
         }
 
+        private fun getVideoInfo() {
+            videoWidth = mDecoder.outputFormat.getInteger(MediaFormat.KEY_WIDTH)
+            videoHeight = mDecoder.outputFormat.getInteger(MediaFormat.KEY_HEIGHT)
+            videoPitch = mDecoder.outputFormat.getInteger(MediaFormat.KEY_SLICE_HEIGHT)
+            videoStride = mDecoder.outputFormat.getInteger(MediaFormat.KEY_STRIDE)
+            when (mDecoder.outputFormat.getInteger(MediaFormat.KEY_COLOR_FORMAT)) {
+                MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar -> videoYuvType = CvUtils.YUV_NV12
+                MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar -> videoYuvType = CvUtils.YUV_I420
+                else -> videoYuvType = CvUtils.YUV_NV21
+            }
+        }
         fun getCurrentVideoPosition(): Long {
             if (mBufferInfo != null)
                 return (mBufferInfo!!.presentationTimeUs / 1000)

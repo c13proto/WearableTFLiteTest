@@ -1,7 +1,6 @@
 package com.sonymobile.agent.robot.camera
 
 import android.graphics.Bitmap
-import android.graphics.Rect
 import android.util.Log
 import java.nio.ByteBuffer
 

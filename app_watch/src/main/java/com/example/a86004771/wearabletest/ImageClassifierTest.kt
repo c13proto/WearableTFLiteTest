@@ -9,14 +9,15 @@ import android.util.Log
 import com.sonymobile.agent.robot.camera.CvUtils
 import com.sonymobile.agent.robot.camera.CvUtils.convertYuvToBitmap
 
-public class ImageClassifierTest{
+class ImageClassifierTest{
 
     var classifier: ImageClassifier
-    private val HANDLE_THREAD_NAME = "CameraBackground"
+    private val HANDLE_THREAD_NAME = "TFLiteThread"
 
 //    private val lock = Any()
     private lateinit var backgroundThread: HandlerThread
     private lateinit var backgroundHandler: Handler
+    private var preInputFrameTime=0L
 
     companion object {
         var onClassifierResultCallback: ((result:List<String>) -> Unit)? = null
@@ -26,10 +27,13 @@ public class ImageClassifierTest{
     {
         classifier= ImageClassifierQuantizedMobileNet(activity)
         startBackgroundThread()
-        CustomViewMediaCodec.onFrameChange = { i420Buffer, width, height, pitch ->
+        CustomViewMediaCodec.onFrameChange = { yuvBuffer,yuvType, width, height, pitch ->
+            val currentTime=System.currentTimeMillis()
+            Log.d("yama ImageClassifiereTest","input FPS=${1000f/(currentTime-preInputFrameTime)}")
+            preInputFrameTime=currentTime
 //            synchronized(lock){
                 backgroundHandler.removeCallbacksAndMessages(null)
-                backgroundHandler.post(periodicClassify(i420Buffer,width,height,pitch))
+                backgroundHandler.post(periodicClassify(yuvBuffer,yuvType,width,height,pitch))
 //            }
 
         }
@@ -41,17 +45,18 @@ public class ImageClassifierTest{
         backgroundHandler = Handler(backgroundThread.looper)
     }
 
-    inner class periodicClassify(yuvBuffer: ByteArray,width:Int,height:Int,pitch:Int) : Runnable {
+    inner class periodicClassify(yuvBuffer: ByteArray,yuvType:Int,width:Int,height:Int,pitch:Int) : Runnable {
         private val orgBytearray:ByteArray = yuvBuffer
+        private val orgYuvType=yuvType
         private val orgImageWidth=width
         private val orgImageHeight=height
         private val orgImagePitch=pitch
         override fun run() {
-            classifyFrame(orgBytearray,orgImageWidth,orgImageHeight,orgImagePitch)
+            classifyFrame()
         }
-        private fun classifyFrame(yuvBuffer: ByteArray,width:Int,height:Int,pitch:Int) {
+        private fun classifyFrame() {
             //bitmapをclassfire.x classfire.yのサイズにする必要あり
-            val frameBitmap = convertYuvToBitmap(yuvBuffer,CvUtils.YUV_I420, width, height, pitch, classifier.imageSizeX, classifier.imageSizeY)
+            val frameBitmap = convertYuvToBitmap(orgBytearray,orgYuvType, orgImageWidth, orgImageHeight, orgImagePitch, classifier.imageSizeX, classifier.imageSizeY)
             val classifereResult = classifier.classifyFrame(frameBitmap)//textShowに識別結果が書かれている
             frameBitmap.recycle()
             Log.d("yama classifyFrame",classifereResult)

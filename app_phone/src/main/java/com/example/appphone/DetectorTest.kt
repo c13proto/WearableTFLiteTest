@@ -81,7 +81,7 @@ class DetectorTest {
 
     private fun setupDetectingTask() {
 
-        CustomViewMediaCodec.onFrameChange = { i420Buffer, width, height, pitch ->
+        CustomViewMediaCodec.onFrameChange = { yuvBuffer, yuvType, width, height, pitch ->
             //            Log.d("yama setupDetectingTask","width=${width}")
 
             if (!isDetectionReady) {
@@ -92,7 +92,7 @@ class DetectorTest {
             if (mDetectionHandler != null) {
                 synchronized(mlock) {
                     mDetectionHandler!!.removeCallbacksAndMessages(null)
-                    mDetectionHandler!!.post(ObjectDetectionTask(i420Buffer,width,height,pitch))
+                    mDetectionHandler!!.post(ObjectDetectionTask(yuvBuffer,yuvType,width,height,pitch))
                 }
             }
 
@@ -146,17 +146,19 @@ class DetectorTest {
     }
 
     private var outdebug_count=0
-    inner class ObjectDetectionTask(yuvBuffer: ByteArray,width:Int,height:Int,pitch:Int) : Runnable
+    inner class ObjectDetectionTask(yuvBuffer: ByteArray,yuvType:Int,width:Int,height:Int,pitch:Int) : Runnable
     {
-        val orgI420Bytearray:ByteArray = yuvBuffer
+        val orgYuvBytearray:ByteArray = yuvBuffer
+        val orgImageYuvType=yuvType
         val orgImageWidth=width
         val orgImageHeight=height
         val orgImagePitch=pitch
 
+
         override fun run() {
             motionDetectCtrl()
             cropAreaCtrl(detectionImageHeight == detectionImageWidth)
-            if (!CvUtils.yuvCropRotateToRgb(orgI420Bytearray, CvUtils.YUV_NV12, orgImageWidth, orgImageHeight,orgImagePitch ,mCropArea,0, mDetectorBuffer!!, detectionImageWidth, detectionImageHeight, 3)) {
+            if (!CvUtils.yuvCropRotateToRgb(orgYuvBytearray, orgImageYuvType, orgImageWidth, orgImageHeight,orgImagePitch ,mCropArea,0, mDetectorBuffer!!, detectionImageWidth, detectionImageHeight, 3)) {
                 Log.e(TAG, "Failed to create image nativeImageCrop")
                 return
             }
@@ -237,7 +239,7 @@ class DetectorTest {
 
         private fun motionDetectCtrl() {
             val grayBuffer = ByteBuffer.allocateDirect(motionImageHeight * motionImageWidth)
-            CvUtils.yuvToRgb(orgI420Bytearray, CvUtils.YUV_NV12, orgImageWidth, orgImageHeight, orgImagePitch, grayBuffer, motionImageWidth, motionImageHeight, 1)
+            CvUtils.yuvToRgb(orgYuvBytearray, orgImageYuvType, orgImageWidth, orgImageHeight, orgImagePitch, grayBuffer, motionImageWidth, motionImageHeight, 1)
 
             if (canMotionDetection) {
 //                val t1 = System.currentTimeMillis()
@@ -493,6 +495,6 @@ class DetectorTest {
                 detectedObject.yPosition(),
                 detectedObject.xPosition()+detectedObject.width(),
                 detectedObject.yPosition()+detectedObject.height()
-                )
+        )
     }
 }

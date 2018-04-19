@@ -10,7 +10,6 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.CompoundButton
 import android.widget.SeekBar
 import android.widget.Switch
 import com.example.app_phone.R
@@ -18,23 +17,20 @@ import com.sonymobile.agent.robot.camera.CvUtils
 import com.sonymobile.agent.robot.camera.CvUtils.convertYuvToBitmap
 import com.sonymobile.agent.robot.camera.DetectedObject
 import jp.co.cyberagent.android.gpuimage.GPUImage
-import kotlinx.android.synthetic.main.activity_main.*
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-import java.lang.Float
 import java.util.ArrayList
 
 
-class CustomViewMediaCodec
+class CustomViewMediaCodec @JvmOverloads
 constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0) : View(context, attrs, defStyleAttr)
 {
 
     companion object {//コールバック関係
         var onStop:(() -> Unit)? = null
-        var onFrameChange: ((nv12Buffer:ByteArray ,width:Int,height:Int,pitch:Int) -> Unit)?=null
+        var onFrameChange: ((yuvBuffer:ByteArray,yuvType:Int,width:Int,height:Int,pitch:Int) -> Unit)?=null
 //        var onFrameChangeBitmap:((bitmap:Bitmap)->Unit)?=null
-
         val mVideoeSize=Point()
         val mDisplaySize=Point()
         val mDrawOffset=Point()
@@ -60,7 +56,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     private var lastSeekPosition = 0L
 
 
-//UI周り
+
     private lateinit var mSeekbar: SeekBar
     private lateinit var mSwitch: Switch
     private var preOnDraw=0L
@@ -129,22 +125,15 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         mVideoeSize.y = Integer.valueOf(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT))
         retriever.release()
         calculateDrawScale()
-        setGLSurfaceMargin()
+        setLayoutMargin()
         setVideoPath()
 
 
     }
-    private fun setGLSurfaceMargin(){
-//        val layoutParams=mGLSurfaceView.layoutParams
-        val marginLayoutParams=mGLSurfaceView.layoutParams as ViewGroup.MarginLayoutParams
-        marginLayoutParams.setMargins(
-                (((mDisplaySize.x.toFloat() - mVideoeSize.x * mDrawScale) / 2)/mDrawScale).toInt(),
-                (((mDisplaySize.y.toFloat() - mVideoeSize.y * mDrawScale) / 2)/mDrawScale).toInt(),
-                (((mDisplaySize.x.toFloat() - mVideoeSize.x * mDrawScale) / 2)/mDrawScale).toInt(),
-                (((mDisplaySize.y.toFloat() - mVideoeSize.y * mDrawScale) / 2 +(mDisplaySize.y-mDisplaySize.x))/mDrawScale).toInt()
-                )
-
-
+    private fun setLayoutMargin(){
+        val margin=(mDisplaySize.y-mDisplaySize.x* mVideoeSize.y/ mVideoeSize.x)/2
+        (mGLSurfaceView.layoutParams as ViewGroup.MarginLayoutParams).setMargins(0,margin,0,margin)
+        (this.layoutParams as ViewGroup.MarginLayoutParams).setMargins(0, margin,0,margin)
     }
 
     private fun calculateDrawScale() {//ちょっと重そうなので一回だけ処理するようにする
@@ -153,18 +142,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         val scaleY = mDisplaySize.y.toFloat() / mVideoeSize.y
         var  scale =    if (scaleX<scaleY) scaleX
                         else scaleY//画面枠ぴったりになる
-        //丸型なのでさらに縮める
-        val theta = Math.atan(mVideoeSize.y.toDouble() / mVideoeSize.x)
-        if (mVideoeSize.x > mVideoeSize.y) scale *= Math.cos(theta).toFloat()
-        else scale *= Math.sin(theta).toFloat()
-
         mDrawScale =scale
-        mDrawOffset.x= (((mDisplaySize.x.toFloat() - mVideoeSize.x * scale) / 2)/scale).toInt()//offsetもcaleに合わせる
-        mDrawOffset.y= (((mDisplaySize.y.toFloat() - mVideoeSize.y * scale) / 2)/scale).toInt()
-        Log.d("yama calculateDrawScale", "scale=${mDrawScale}")
-        Log.d("yama calculateDrawScale","display="+ mDisplaySize.x+","+ mDisplaySize.y)
-        Log.d("yama calculateDrawScale","video="+ mVideoeSize.x+","+ mVideoeSize.y)
-        Log.d("yama calculateDrawScale","offset="+ mDrawOffset.x+","+ mDrawOffset.y)
     }
 
     fun start() {
@@ -197,9 +175,12 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     }
 
 private var didWriteBuffer=false
-    internal fun onFrameCaptrueCtrl(nv12buffer: ByteArray, width: Int, height: Int, pitch: Int) {//
-//        Log.d("yama","width,height,pitch="+width+","+height+","+pitch)//ログ出すと激重
-        onFrameChange?.invoke(nv12buffer, width, height, pitch)//コールバック
+    private var preFrameCaptrueTime=0L
+    internal fun onFrameCaptrueCtrl(yuvBuffer: ByteArray,yuv_type:Int ,width: Int, height: Int, pitch: Int) {//
+//        val currentTime=System.currentTimeMillis()
+//        Log.d("yama onFrameCaptrueCtrl","FPS=${1000f/(currentTime-preFrameCaptrueTime)}")
+//        preFrameCaptrueTime=currentTime
+        onFrameChange?.invoke(yuvBuffer, yuv_type,width, height, pitch)//コールバック
 
 
         if(mEnableOverlayDebug)
@@ -207,14 +188,14 @@ private var didWriteBuffer=false
             mHandler!!.removeCallbacksAndMessages(null)//非同期にすると再生時間がおかしくなるかも
             mHandler!!.post({
 //                updateFrame(nv12buffer, width, height, pitch)
-                mGPUImage!!.setImage(convertYuvToBitmap(nv12buffer,CvUtils.YUV_NV12, width, height, pitch))
+                mGPUImage!!.setImage(convertYuvToBitmap(yuvBuffer,yuv_type, width, height, pitch))
                 invalidate()
                 mSeekbar.progress = (getCurrentPosition() / 1000).toInt()
             })
         }
 
 //        if(!didWriteBuffer){
-//            outputByteArray(nv12buffer)
+//            outputByteArray(yuvBuffer)
 //            didWriteBuffer=true
 //        }
 
@@ -249,7 +230,7 @@ private var didWriteBuffer=false
     }
     private fun drawFrame(canvas: Canvas){
 
-        canvas.drawBitmap(mFrame, mDrawOffset.x.toFloat(), mDrawOffset.y.toFloat(), mPaintRect)
+        canvas.drawBitmap(mFrame, 0f, 0f, mPaintRect)
     }
     private fun drawRect(canvas: Canvas){
 
@@ -261,13 +242,13 @@ private var didWriteBuffer=false
                     "motion" -> mPaintRect.color = Color.BLUE
                     else -> mPaintRect.color = Color.YELLOW
                 }
-                val drawRect = Rect((obj.xPosition() ).toInt(),
-                        (obj.yPosition() ).toInt(),
-                        ((obj.xPosition() + obj.width()) ).toInt(),
-                        ((obj.yPosition() + obj.height())).toInt()
+                val rect = Rect(obj.xPosition(),
+                        obj.yPosition(),
+                        obj.xPosition() + obj.width(),
+                        obj.yPosition() + obj.height()
                 )
-                drawRect.offset(mDrawOffset.x, mDrawOffset.y)
-                canvas.drawRect(drawRect, mPaintRect)
+//                rect.offset(mDrawOffset.x, mDrawOffset.y)
+                canvas.drawRect(rect, mPaintRect)
             }
         }
     }
@@ -301,6 +282,10 @@ private var didWriteBuffer=false
         private val audioTrack: AudioTrack? = null
         private var videoWidth: Int = 0
         private var videoHeight: Int = 0
+        private var videoStride:Int=0
+        private var videoPitch:Int=0
+        private var videoYuvType=0
+
 
         private var lastPresentationTimeUs: Long = 0
         private var seeked = false
@@ -342,8 +327,7 @@ private var didWriteBuffer=false
                     mExtractor.selectTrack(i)
                     mDecoder = MediaCodec.createDecoderByType(mime)
                     mDecoder.configure(format, null, null, 0)
-                    videoWidth = format.getInteger(MediaFormat.KEY_WIDTH)
-                    videoHeight = format.getInteger(MediaFormat.KEY_HEIGHT)
+
                     break
                 }
             }
@@ -391,14 +375,17 @@ private var didWriteBuffer=false
 
                 when (outIndex) {
                     MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED -> Log.d("DecodeActivity", "INFO_OUTPUT_BUFFERS_CHANGED")
-                    MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> Log.d("DecodeActivity", "New format " + mDecoder.outputFormat)
+                    MediaCodec.INFO_OUTPUT_FORMAT_CHANGED ->{
+                        Log.d("DecodeActivity", "New format " + mDecoder.outputFormat)
+                        getVideoInfo()
+                    }
                     MediaCodec.INFO_TRY_AGAIN_LATER -> Log.d("DecodeActivity", "dequeueOutputBuffer timed out!")
                     else -> {
                         val buffer = mDecoder.getOutputBuffer(outIndex)
                         val byteArray = ByteArray(buffer!!.remaining())
                         buffer.get(byteArray)
                         if (byteArray.size >= videoHeight.toDouble() * videoWidth.toDouble() * 1.5) {//nv12のサイズになっているとき(ずれてるときもある)
-                            mCustomViewMediaCodec.onFrameCaptrueCtrl(byteArray, videoWidth, videoHeight, videoHeight + videoHeight.and(15))//高さを16の倍数にする
+                            mCustomViewMediaCodec.onFrameCaptrueCtrl(byteArray,videoYuvType, videoWidth, videoHeight, videoPitch)//高さを16の倍数にする
                         }
                         //Log.v("DecodeActivity", "We can't use this buffer but render it due to the API limit, " + buffer);
 
@@ -439,6 +426,17 @@ private var didWriteBuffer=false
             //            mExtractor.release();
         }
 
+        private fun getVideoInfo() {
+            videoWidth = mDecoder.outputFormat.getInteger(MediaFormat.KEY_WIDTH)
+            videoHeight = mDecoder.outputFormat.getInteger(MediaFormat.KEY_HEIGHT)
+            videoPitch = mDecoder.outputFormat.getInteger(MediaFormat.KEY_SLICE_HEIGHT)
+            videoStride = mDecoder.outputFormat.getInteger(MediaFormat.KEY_STRIDE)
+            when (mDecoder.outputFormat.getInteger(MediaFormat.KEY_COLOR_FORMAT)) {
+                MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar -> videoYuvType = CvUtils.YUV_NV12
+                MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar -> videoYuvType = CvUtils.YUV_I420
+                else -> videoYuvType = CvUtils.YUV_NV21
+            }
+        }
         fun getCurrentVideoPosition(): Long {
             if (mBufferInfo != null)
                 return (mBufferInfo!!.presentationTimeUs / 1000)
