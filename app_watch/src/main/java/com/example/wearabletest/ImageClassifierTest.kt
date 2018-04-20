@@ -1,4 +1,4 @@
-package com.example.a86004771.wearabletest
+package com.example.wearabletest
 
 import android.app.Activity
 import android.os.Handler

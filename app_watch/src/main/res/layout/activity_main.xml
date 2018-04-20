@@ -17,7 +17,7 @@
         android:layout_height="match_parent"/>
 
 
-    <com.example.a86004771.wearabletest.CustomViewMediaCodec
+    <com.example.wearabletest.CustomViewMediaCodec
         android:id="@+id/video_preview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
