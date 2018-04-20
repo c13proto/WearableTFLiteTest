@@ -10,7 +10,6 @@ import kotlinx.android.synthetic.main.activity_main.*
 class MainActivity : WearableActivity()
 {
 
-    lateinit var detectorTest: DetectorTest
     lateinit var classifierTest: ImageClassifierTest
 
     override fun onCreate(savedInstanceState: Bundle?) {

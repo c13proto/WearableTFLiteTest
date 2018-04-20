@@ -9,7 +9,6 @@ import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : Activity() {
 
-    lateinit var detectorTest: DetectorTest
     lateinit var classifierTest: ImageClassifierTest
     // Our OpenGL Surfaceview
     private var glSurfaceView: GLSurfaceView? = null
@@ -26,7 +25,6 @@ class MainActivity : Activity() {
         video_preview!!.setupCustomViewMediaCodec(seekBar_videoPos,video_sw,gl_preview,true)
 
         classifierTest=ImageClassifierTest(this)
-//        detectorTest=DetectorTest(this)
 
 
 

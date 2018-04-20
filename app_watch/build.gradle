@@ -12,24 +12,12 @@ android {
         versionCode 1
         versionName "1.0"
 
-//        externalNativeBuild {
-//            cmake {
-//                cppFlags '-std=c++11','-funsafe-math-optimizations','-O3'
-//                arguments '-DANDROID_ARM_NEON=TRUE','-DANDROID_CPP_FEATURES=rtti exceptions'
-//
-//            }
-//        }
+
         ndk {
             abiFilters "armeabi-v7a"//,"armeabi","arm64-v8a"//実行環境によって限定しないと読みに言ってくれない場合がある
         }
     }
-//    externalNativeBuild {
-//        // Encapsulates your CMake build configurations.
-//        cmake {
-//            path "src/main/jni/cvUtils/CMakeLists.txt"
-//        }
-//
-//    }
+
     buildTypes {
         release {
             minifyEnabled false
@@ -37,8 +25,9 @@ android {
         }
     }
     aaptOptions {
-        noCompress "tflite"//
+        noCompress "tflite"//assetsのTFLiteを読み込ませるので
     }
+
 }
 
 dependencies {
@@ -52,5 +41,5 @@ dependencies {
     compileOnly 'com.google.android.wearable:wearable:2.3.0'
     implementation 'org.tensorflow:tensorflow-lite:+'
     implementation project(':gpuimageVideoRecordLibrary')
-    implementation project(':common_module')
+    implementation project(':common')
 }

@@ -13,9 +13,8 @@ import android.view.WindowManager
 import android.widget.SeekBar
 import android.widget.Switch
 import com.example.app_phone.R
-import com.sonymobile.agent.robot.camera.CvUtils
-import com.sonymobile.agent.robot.camera.CvUtils.convertYuvToBitmap
-import com.sonymobile.agent.robot.camera.DetectedObject
+import com.example.common.CvUtils
+import com.example.common.CvUtils.convertYuvToBitmap
 import jp.co.cyberagent.android.gpuimage.GPUImage
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -49,7 +48,6 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
     private val mPaintRect=Paint()
     private val mPaintText=Paint()
     private val textSize=25f
-    private val detectedObjects = ArrayList<DetectedObject>()
     private val classifierResult=ArrayList<String>()
 
     private val mlock = Any()
@@ -80,7 +78,6 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         mSwitch=switch
 
         setupLayout()
-        setupDetectorCallback()
         setupClassifierCallback()
 
         mSwitch.setOnCheckedChangeListener({ _, isChecked ->
@@ -92,16 +89,7 @@ constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
         })
 
     }
-    private fun setupDetectorCallback(){
-        DetectorTest.onDetectorResultCallback ={
-            synchronized(mlock) {
-                detectedObjects.clear()
-                for (obj: DetectedObject in it) {
-                    detectedObjects.add(obj)
-                }
-            }
-        }
-    }
+
     private fun setupClassifierCallback(){
         ImageClassifierTest.onClassifierResultCallback ={
             synchronized(mlock) {
@@ -224,7 +212,6 @@ private var didWriteBuffer=false
 //        preOnDraw=System.currentTimeMillis()
         canvas.scale(mDrawScale, mDrawScale)
         if (mFrame != null)drawFrame(canvas)
-        drawRect(canvas)
         drawClassifer(canvas)
 
     }
@@ -232,26 +219,7 @@ private var didWriteBuffer=false
 
         canvas.drawBitmap(mFrame, 0f, 0f, mPaintRect)
     }
-    private fun drawRect(canvas: Canvas){
 
-        synchronized(mlock) {
-            for (obj: DetectedObject in detectedObjects) {
-
-                when (obj.name()) {
-                    "searching" -> mPaintRect.color = Color.RED
-                    "motion" -> mPaintRect.color = Color.BLUE
-                    else -> mPaintRect.color = Color.YELLOW
-                }
-                val rect = Rect(obj.xPosition(),
-                        obj.yPosition(),
-                        obj.xPosition() + obj.width(),
-                        obj.yPosition() + obj.height()
-                )
-//                rect.offset(mDrawOffset.x, mDrawOffset.y)
-                canvas.drawRect(rect, mPaintRect)
-            }
-        }
-    }
     private fun drawClassifer(canvas: Canvas){
         var offset=0f
         synchronized(mlock) {
@@ -266,7 +234,7 @@ private var didWriteBuffer=false
     internal fun updateFrame(nv12buffer: ByteArray, width: Int, height: Int, pitch: Int) {
         synchronized(mlock) {
             mFrame?.recycle()
-            mFrame = convertYuvToBitmap(nv12buffer,CvUtils.YUV_NV12, width, height, pitch)
+            mFrame = convertYuvToBitmap(nv12buffer, CvUtils.YUV_NV12, width, height, pitch)
         }
 
     }

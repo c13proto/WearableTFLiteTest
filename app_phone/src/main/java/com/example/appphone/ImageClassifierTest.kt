@@ -6,7 +6,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import android.util.Log
-import com.sonymobile.agent.robot.camera.CvUtils
+import com.example.common.CvUtils
 
 class ImageClassifierTest{
 

@@ -1,13 +1,11 @@
 package com.example.a86004771.wearabletest
 
 import android.app.Activity
-import android.graphics.Bitmap
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
 import android.util.Log
-import com.sonymobile.agent.robot.camera.CvUtils
-import com.sonymobile.agent.robot.camera.CvUtils.convertYuvToBitmap
+import com.example.common.CvUtils.convertYuvToBitmap
 
 class ImageClassifierTest{
 

@@ -1,1 +1,1 @@
-include ':app_watch', ':app_phone',':gpuimageVideoRecordLibrary', ':common_module'
+include ':app_watch', ':app_phone',':gpuimageVideoRecordLibrary', ':common'
