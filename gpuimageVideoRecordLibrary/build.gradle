@@ -2,7 +2,7 @@ apply plugin: 'com.android.library'
 //apply plugin: 'com.novoda.bintray-release'
 android {
     compileSdkVersion 'android-P'
-    buildToolsVersion '27.0.3'
+    buildToolsVersion '28.0.0 rc1'
     defaultConfig {
         minSdkVersion 25
         targetSdkVersion 27
@@ -20,7 +20,7 @@ android {
             }
         }
         ndk {
-            abiFilters "armeabi-v7a"//,"armeabi","arm64-v8a"//実行環境によって限定しないと読みに言ってくれない場合がある
+            abiFilters  "armeabi-v7a","arm64-v8a"//,"armeabi"//実行環境によって限定しないと読みに言ってくれない場合がある
         }
     }
 

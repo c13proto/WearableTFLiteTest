@@ -6,6 +6,8 @@ import android.os.HandlerThread
 import android.os.Process
 import android.util.Log
 import com.example.common.CvUtils.convertYuvToBitmap
+import com.example.common.ImageClassifier
+import com.example.common.ImageClassifierQuantizedMobileNet
 
 class ImageClassifierTest{
 

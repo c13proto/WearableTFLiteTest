@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-package com.example.appphone;
+package com.example.common;
 
 import android.app.Activity;
 import android.content.res.AssetFileDescriptor;
@@ -99,7 +99,7 @@ public abstract class ImageClassifier {
   }
 
   /** Classifies a frame from the preview stream. */
-  String classifyFrame(Bitmap bitmap) {
+  public String classifyFrame(Bitmap bitmap) {
     if (tflite == null) {
       Log.e(TAG, "Image classifier has not been initialized; Skipped.");
       return "Uninitialized Classifier.";
@@ -228,14 +228,14 @@ public abstract class ImageClassifier {
    *
    * @return
    */
-  protected abstract int getImageSizeX();
+  public abstract int getImageSizeX();
 
   /**
    * Get the image size along the y axis.
    *
    * @return
    */
-  protected abstract int getImageSizeY();
+  public abstract int getImageSizeY();
 
   /**
    * Get the number of bytes that is used to store a single color channel value.

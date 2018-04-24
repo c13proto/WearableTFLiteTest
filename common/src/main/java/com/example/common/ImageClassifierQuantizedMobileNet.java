@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-package com.example.wearabletest;
+package com.example.common;
 
 import android.app.Activity;
 
@@ -35,7 +35,7 @@ public class ImageClassifierQuantizedMobileNet extends ImageClassifier {
    *
    * @param activity
    */
-  ImageClassifierQuantizedMobileNet(Activity activity) throws IOException {
+  public ImageClassifierQuantizedMobileNet(Activity activity) throws IOException {
     super(activity);
     labelProbArray = new byte[1][getNumLabels()];
   }
@@ -53,12 +53,12 @@ public class ImageClassifierQuantizedMobileNet extends ImageClassifier {
   }
 
   @Override
-  protected int getImageSizeX() {
+  public int getImageSizeX() {
     return 224;
   }
 
   @Override
-  protected int getImageSizeY() {
+  public int getImageSizeY() {
     return 224;
   }
 
