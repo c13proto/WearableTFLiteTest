@@ -56,7 +56,34 @@ JNI_METHOD(jboolean,yuvToBitmap)(JNIEnv* env, jobject, const jbyteArray src_yuv,
     if(img_check<100)img_check++;
     return true;
 }
-JNI_METHOD(jboolean,yuvCropRotateToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jint yuv_type,jint src_width,jint src_height,jint src_pitch,const jintArray crop_area,jint rotate,
+JNI_METHOD(jboolean,bitmapToBgr)(JNIEnv* env, jobject,jobject src_bitmap, jobject dst,jint dst_width, jint dst_height){
+    unsigned char *p_dst = reinterpret_cast<unsigned char *>(env->GetDirectBufferAddress(dst));
+    AndroidBitmapInfo info;
+    AndroidBitmap_getInfo(env, src_bitmap, &info);
+    if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888){
+        __android_log_print(ANDROID_LOG_ERROR, "yama bitmapToBgr:","FORMAT_ERROR") ;
+        return false;
+    }
+    unsigned char *p_src;
+    if(AndroidBitmap_lockPixels(env, src_bitmap, reinterpret_cast<void **>(&p_src))!=ANDROID_BITMAP_RESULT_SUCCESS)return false;
+    static int img_check=0;
+
+    Mat rgba=Mat(info.height,info.width,CV_8UC4,p_src);
+    Mat bgr=Mat(info.height,info.width,CV_8UC3);
+    cvtColor(rgba, bgr, CV_RGBA2BGR);
+//    if(img_check==0) __android_log_print(ANDROID_LOG_DEBUG, "yama bitmapToBgr:","%d" ,imwrite("/sdcard/Download/rgba.jpg",bgr)) ;
+    resize(bgr,bgr,Size(dst_width,dst_height));
+
+    memcpy(p_dst,bgr.data,sizeof(jbyte)*bgr.total()*bgr.elemSize());
+//    if(img_check==0) __android_log_print(ANDROID_LOG_DEBUG, "yama bitmapToBgr:","%d" ,imwrite("/sdcard/Download/bgr.jpg",bgr)) ;
+//    if(img_check==0) __android_log_print(ANDROID_LOG_DEBUG, "yama bitmapToBgr:","%d" ,imwrite("/sdcard/Download/rgba.jpg",rgba)) ;
+    AndroidBitmap_unlockPixels(env, src_bitmap);
+    rgba.release();
+    bgr.release();
+    if(img_check<100)img_check++;
+    return true;
+}
+JNI_METHOD(jboolean,yuvCropRotateToBgr)(JNIEnv* env, jobject, const jbyteArray src_yuv,jint yuv_type,jint src_width,jint src_height,jint src_pitch,const jintArray crop_area,jint rotate,
              jobject dst_bytebuffer,jint dst_width,jint dst_height,jint dst_ch) {
     jboolean isCopy;
     jbyte *img_src = env->GetByteArrayElements(src_yuv, &isCopy);
@@ -117,7 +144,7 @@ JNI_METHOD(jboolean,yuvCropRotateToRgb)(JNIEnv* env, jobject, const jbyteArray s
     return true;
     }
 
-JNI_METHOD(jboolean,yuvToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jint yuv_type,jint src_width,jint src_height,jint src_pitch,
+JNI_METHOD(jboolean,yuvToBgr)(JNIEnv* env, jobject, const jbyteArray src_yuv,jint yuv_type,jint src_width,jint src_height,jint src_pitch,
                                 jobject dst_bytebuffer,jint dst_width,jint dst_height,jint dst_ch){
     jboolean isCopy;
     jbyte *img_src = env->GetByteArrayElements(src_yuv, &isCopy);
@@ -129,7 +156,7 @@ JNI_METHOD(jboolean,yuvToRgb)(JNIEnv* env, jobject, const jbyteArray src_yuv,jin
     static int img_check=0;
     resize(converted,converted,Size(dst_width,dst_height));
     memcpy(img_dst,converted.data,sizeof(jbyte)*converted.total()*converted.elemSize());
-    if(img_check==0)imwrite("/sdcard/yuvToRgb.jpg",converted);
+//    if(img_check==0)imwrite("/sdcard/yuvToBgr.jpg",converted);
     converted.release();
 
     env->ReleaseByteArrayElements(src_yuv, img_src, JNI_ABORT);
@@ -245,6 +272,7 @@ Mat bytearrayToMat(const uchar* img,int width,int height,int ch){
     Mat mat;
     if (ch == 1) mat = Mat(height,width, CV_8UC1,const_cast<uchar*>(img));
     else if(ch == 3)mat = Mat(height, width, CV_8UC3,const_cast<uchar*>(img));
+    else if(ch == 4)mat = Mat(height, width, CV_8UC4,const_cast<uchar*>(img));
     return mat;
 }
 bool ImageOutput(const uchar *img,int height,int width,int ch,char* filename) {
